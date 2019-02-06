@@ -11,7 +11,6 @@ BACKUP_SUFFIX=${BACKUP_SUFFIX:-}
 MYSQL_HOST=${MYSQL_HOST:-localhost}
 MYSQL_USER=${MYSQL_USER:-root}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
-MYSQL_DATABASE=${MYSQL_DATABASE:-root}
 
 function help() {
 	echo "$0"
@@ -20,9 +19,9 @@ function help() {
 	echo "		DAYS_TO_KEEP: number of days after which old backup files will be deleted"
 	echo "		BACKUP_SUFFIX: suffix of the backup file"
 	echo "		BACKUP_DIR: output directory"
-	echo "		PG_BACKUP_TYPE: either plain (.tar.gz sql) or custom (.dump)"
-    echo "  Default PostgreSQL environment variables can be used, see"
-    echo "  https://www.postgresql.org/docs/9.3/static/libpq-envars.html"
+	echo "		MYSQL_HOST: mysql hostname"
+	echo "		MYSQL_USER: mysql username"
+	echo "		MYSQL_PASSWORD: mysql user password"
 }
 
 function pre_checks() {
@@ -48,7 +47,7 @@ function perform_backups() {
     log "Starting backup of all databases"
 
     local suffix=$1
-    suffix="`date +\%Y-\%m-\%d-\%H%M`$suffix"
+    suffix="`date +\%Y-\%m-\%d-\%H\%M\%S`$suffix"
 
 	local databases # in two steps to catch eventual errors (otherwise return code is code of local assignment)
 	databases=$(/usr/bin/mysql -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema)")

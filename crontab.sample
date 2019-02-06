@@ -14,7 +14,7 @@
 #--------------------------------------------------
 
 # Run a backup of all PostgreSQL databases every hour
-0 * * * * /usr/bin/docker run -e DAYS_TO_KEEP=7 -e BACKUP_SUFFIX=-daily -e BACKUP_DIR=/backups/ -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres backup-db
+0 * * * * /usr/bin/docker run -e DAYS_TO_KEEP=7 -e BACKUP_SUFFIX=-daily -e BACKUP_DIR=/backups/daily/ -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres lefeverd/docker-db-backup:0.1.0
 
 # Run a backup of all PostgreSQL databases every sunday
-0 0 * * 7 /usr/bin/docker run -e DAYS_TO_KEEP=30 -e BACKUP_SUFFIX=-monthly -e BACKUP_DIR=/backups/ -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres backup-db
+0 0 * * 7 /usr/bin/docker run -e DAYS_TO_KEEP=30 -e BACKUP_SUFFIX=-monthly -e BACKUP_DIR=/backups/weekly/ -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres lefeverd/docker-db-backup:0.1.0

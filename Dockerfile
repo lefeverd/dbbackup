@@ -1,5 +1,7 @@
 FROM alpine
 
+LABEL maintainer="David Lefever <lefever.d@gmail.com>"
+
 RUN apk update
 RUN apk add --no-cache bash
 RUN apk add --no-cache postgresql-client mysql-client

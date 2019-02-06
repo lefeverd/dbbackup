@@ -48,7 +48,7 @@ function perform_backups() {
     log "Starting backup of all databases"
 
     local suffix=$1
-    suffix="`date +\%Y-\%m-\%d-\%H%M`$SUFFIX"
+    suffix="`date +\%Y-\%m-\%d-\%H\%M\%S`$SUFFIX"
     
     BACKUP_FILTER_CLAUSE=""
     if [ -n "$BACKUP_ONLY_FILTER" ] && [ "$BACKUP_ONLY_FILTER" != "false" ]; then

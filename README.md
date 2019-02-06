@@ -21,13 +21,16 @@ To edit the crontab, use `crontab -e`.
     - [Common configuration](#common-configuration)
     - [PostgreSQL](#postgresql)
         - [Configuration](#configuration)
-        - [Raw Docker](#raw-docker)
-        - [Docker-compose](#docker-compose)
+        - [Examples](#examples)
+            - [Backup](#backup)
+            - [Restore](#restore)
     - [MySQL](#mysql)
         - [Configuration](#configuration-1)
-        - [Raw Docker](#raw-docker-1)
-        - [Docker-compose](#docker-compose-1)
+        - [Examples](#examples-1)
+            - [Backup](#backup-1)
+            - [Restore](#restore-1)
 - [Tests](#tests)
+- [Notes](#notes)
 
 <!-- /TOC -->
 
@@ -58,11 +61,9 @@ the postgres backups.
 
 The script also support the default PostgreSQL environment variables [listed here](https://www.postgresql.org/docs/9.3/static/libpq-envars.html).
 
-### Raw Docker
+### Examples
 
-```
-docker build -t backup-db:0.1 .
-```
+#### Backup
 
 ```bash
 docker run \
@@ -72,29 +73,25 @@ docker run \
     -e PGHOST=localhost \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
-    backup-db:0.1
+    -v <host-backup-directory>:/backups/ \
+    lefeverd/docker-db-backup:0.1.0
 ```
 
-### Docker-compose
+#### Restore
 
-An example can be found in `docker-compose-postgres.sample.yaml`.  
-It starts a `postgres` container and a `backup-postgres` container.
+To restore, you can mount the directory containing the backups and executing `pg_restore`, for instance:
 
 ```bash
-docker-compose -f docker-compose-postgres.sample.yml up -d
+docker run \
+    -e PGHOST=localhost \
+    -e PGUSER=postgres \
+    -e PGPASSWORD=postgres \
+    -v <host-backup-directory>:/backups/ \
+    lefeverd/docker-db-backup:0.1.0 bash -c \
+    "
+    pg_restore -Fc -d postgres -C \"/backups/<backup-file.dump>\"
+    "
 ```
-
-When running for the first time, the `backup-postgres` container should exit with an error,
-because the `postgres` container initialization take some time.
-You can already check the logs with:
-
-```bash
-docker-compose logs -f backup-postgres
-```
-
-After a few seconds, you can run `docker-compose -f docker-compose-postgres.sample.yml up -d` again, this time
-the `backup` container should finish without errors.  
-Check the logs again to verify that the dump was created.
 
 ## MySQL
 
@@ -106,53 +103,48 @@ the postgres backups.
 - MYSQL_HOST: defines the MySQL hostname
 - MYSQL_USER: defines the MySQL user
 - MYSQL_PASSWORD: defines the MySQL password
-- MYSQL_DATABASE: defines the MySQL database
 
-### Raw Docker
+### Examples
 
-```
-docker build -t backup-db:0.1 .
-```
+#### Backup
 
 ```bash
 docker run \
     -e DAYS_TO_KEEP=7 \
     -e BACKUP_SUFFIX=-daily \
     -e BACKUP_DIR=/backups/ \
-    -e PGHOST=localhost \
-    -e PGUSER=postgres \
-    -e PGPASSWORD=postgres \
-    backup-db:0.1
+    -e MYSQL_HOST=database-host \
+    -e MYSQL_USER=test \
+    -e MYSQL_PASSWORD=test \
+    -v <host-backup-directory>:/backups/ \
+    lefeverd/docker-db-backup:0.1.0 mysql_backup
 ```
 
-### Docker-compose
+#### Restore
 
-An example can be found in `docker-compose-mysql.sample.yaml`.  
-It starts a `mysql` container and a `backup-mysql` container.
+To restore, you can mount the directory containing the backups, for instance:
 
 ```bash
-docker-compose -f docker-compose-mysql.sample.yml up -d
+docker run \
+    -e MYSQL_HOST=localhost \
+    -e MYSQL_USER=test \
+    -e MYSQL_PASSWORD=test \
+    -v <host-backup-directory>:/backups/ \
+    lefeverd/docker-db-backup:0.1.0 bash -c \
+    "
+    gunzip < \"/backups/<backup-file.sql.gz>\" | mysql -p -h database-host -u test -ptest test
+    "
 ```
-
-When running for the first time, the `backup-mysql` container should exit with an error,
-because the `mysql` container initialization take some time.
-You can already check the logs with:
-
-```bash
-docker-compose logs -f backup-mysql
-```
-
-After a few seconds, you can run `docker-compose -f docker-compose-mysql.sample.yml up -d` again, this time
-the `backup` container should finish without errors.  
-Check the logs again to verify that the dump was created.
 
 # Tests
 
-Some basic tests can be run to ensure the backup container exits with a correct status code (0).
+Some basic tests can be run to ensure that the backups are correctly executed and can be restored.
 
 ```bash
-./integration-test-mysql.sh
-./integration-test-postgres.sh
+./tests/integration-test-mysql.sh
+./tests/integration-test-postgres.sh
 ```
 
-These tests can be improved to verify the content of the backups.
+# Notes
+
+Currently, the script will backup all databases (in separate files).
