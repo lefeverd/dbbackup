@@ -24,3 +24,8 @@ function cleanup_docker_container() {
   docker kill "${container_name}" > /dev/null 2>&1
   docker rm -f "${container_name}" > /dev/null 2>&1
 }
+
+function build_docker_image () {
+    IMAGE_TAG="$1"
+    docker build -t "lefeverd/docker-db-backup:${IMAGE_TAG}" .
+}

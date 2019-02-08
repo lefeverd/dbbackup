@@ -48,7 +48,7 @@ function perform_backups() {
     log "Starting backup of all databases"
 
     local suffix=$1
-    suffix="`date +\%Y-\%m-\%d-\%H\%M\%S`$SUFFIX"
+    suffix="`date +\%Y-\%m-\%d-\%H\%M\%S`$suffix"
     
     BACKUP_FILTER_CLAUSE=""
     if [ -n "$BACKUP_ONLY_FILTER" ] && [ "$BACKUP_ONLY_FILTER" != "false" ]; then
@@ -92,11 +92,11 @@ function perform_backups() {
 
 function prune_old_backups() {
     log "Deleting old backups"
-	if [ -z "$BACKUP_SUFFIX" ]; then
-		find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*-${BACKUP_SUFFIX}.*" -exec rm -rf '{}' ';'
-	else
-		find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -exec rm -rf '{}' ';'
-	fi
+    if [ "$PG_BACKUP_TYPE" = "plain" ]; then
+        find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*${BACKUP_SUFFIX}.sql.gz" -exec echo '{}' \; -exec rm -rf '{}' \;
+    elif [ "$PG_BACKUP_TYPE" = "custom" ]; then
+        find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*${BACKUP_SUFFIX}.dump" -exec echo '{}' \; -exec rm -rf '{}' \;
+    fi
     log "Deleting old backups done"
 }
 

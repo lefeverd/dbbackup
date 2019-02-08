@@ -35,11 +35,7 @@ function pre_checks() {
 
 function prune_old_backups() {
     log "Deleting old backups"
-    if [ -z "$BACKUP_SUFFIX" ]; then
-		find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*-${BACKUP_SUFFIX}.*" -exec rm -rf '{}' ';'
-	else
-		find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*.sql" -exec rm -rf '{}' ';'
-	fi
+	find $BACKUP_DIR -maxdepth 1 -type f -mtime +$DAYS_TO_KEEP -name "*${BACKUP_SUFFIX}.sql.gz" -exec echo '{}' \; -exec rm -rf '{}' \;
     log "Deleting old backups done"
 }
 

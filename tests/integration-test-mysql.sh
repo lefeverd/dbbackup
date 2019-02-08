@@ -3,6 +3,7 @@
 DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${DIR}/common.sh"
 
+IMAGE_TAG="test"
 BACKUP_DIRECTORY="/tmp/mysql-backups-test/"
 DOCKER_NETWORK="mysql-db-test"
 
@@ -43,7 +44,7 @@ function start_cli() {
       -e MYSQL_USER=mysql \
       --network "${DOCKER_NETWORK}" \
       -v "${BACKUP_DIRECTORY}":/backups/ \
-      lefeverd/docker-db-backup:0.1.0 bash -c \
+      "lefeverd/docker-db-backup:${IMAGE_TAG}" bash -c \
       "
       while true; do sleep 10; done;
       "
@@ -71,6 +72,7 @@ function seed_db() {
 
 function start_backup() {
     docker run \
+      --rm \
       --name mysql-test-backup \
       -e DAYS_TO_KEEP=7 \
       -e BACKUP_SUFFIX=-test \
@@ -80,7 +82,7 @@ function start_backup() {
       -e MYSQL_PASSWORD=test \
       -v "${BACKUP_DIRECTORY}":/backups/ \
       --network "${DOCKER_NETWORK}" \
-      lefeverd/docker-db-backup:0.1.0 mysql_backup
+      "lefeverd/docker-db-backup:${IMAGE_TAG}" mysql_backup
     check_status $? "Could not execute backup"
 }
 
@@ -108,7 +110,26 @@ function verify_restore(){
   check_status $? "Could not find seed data in restored database."
 }
 
+function create_mock_backup_files() {
+  now_epoch=$(date +%s)
+  for i in `seq 0 15`; do
+    new_time=$((now_epoch - 86400*i))
+    touch -t "$(date -r $new_time +%Y%m%d%H%M.%S)" "${BACKUP_DIRECTORY}/test_2019-02-02${i}-test.sql.gz"
+  done
+}
+
+function verify_cleanup() {
+  number_of_backups=$(find "${BACKUP_DIRECTORY}/" | wc -l)
+  echo "Number of backups: ${number_of_backups}"
+  if [[ "$number_of_backups" -ne 11 ]]; then # DAYS_TO_KEEP=7, + 2 backups executed in tests, + 2 special . and .. files
+    check_status -1 "Number of backups remaining after cleanup incorrect."
+  fi
+}
+
 function main () {
+  mkdir -p "${BACKUP_DIRECTORY}/"
+  echo "Building image"
+  build_docker_image "${IMAGE_TAG}"
   echo "Cleaning up"
   cleanup
   echo "Creating docker network"
@@ -129,6 +150,12 @@ function main () {
   restore_backup
   echo "Verifying restore"
   verify_restore
+  echo "Creating mock backup files"
+  create_mock_backup_files
+  printf "Starting backup to verify cleanup of mock files\n"
+  start_backup
+  echo "Verifying cleanup of backup files"
+  verify_cleanup
   echo "Cleaning up"
   cleanup
 }
