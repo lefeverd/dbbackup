@@ -1,6 +1,6 @@
 # Backups DB
 
-This container can be used to backup databases.  
+This image can be used to backup databases.  
 It supports the following database engines:
 
 - PostgreSQL
@@ -29,6 +29,7 @@ To edit the crontab, use `crontab -e`.
         - [Examples](#examples-1)
             - [Backup](#backup-1)
             - [Restore](#restore-1)
+- [Metrics](#metrics)
 - [Tests](#tests)
 - [Notes](#notes)
 
@@ -46,6 +47,7 @@ The following environment variables can be used:
 - DAYS_TO_KEEP: defines the number of days to keep old backups. Based on the modification time.
 - BACKUP_SUFFIX: defines a suffix that is added at the end of the backup filename.
 - BACKUP_DIR: defines the directory in which the backups will be stored.
+- PROMETHEUS_PUSHGATEWAY_URL: URL of the [Prometheus Pushgateway](https://github.com/prometheus/pushgateway) (see [Metrics](#metrics))
 
 ## PostgreSQL
 
@@ -135,6 +137,20 @@ docker run \
     gunzip < \"/backups/<backup-file.sql.gz>\" | mysql -p -h database-host -u test -ptest test
     "
 ```
+
+# Metrics
+
+Because this image should be used mainly in crons, exporting metrics to Prometheus directly is
+not possible, as Prometheus works by scraping, and the cron is short lived
+(executing the backup then stopping).
+
+Fortunately, there's the [Prometheus Pushgateway](https://github.com/prometheus/pushgateway), which
+allows to push metrics to it, and it will take care of exposing them to Prometheus.
+
+This image supports it by setting the `PROMETHEUS_PUSHGATEWAY_URL` environment variable to the URL and port of the Pushgateway.
+
+You should set the `honor_labels` to `true` in Prometheus' scrape configuration for the Pushgateway,
+as described [here](https://github.com/prometheus/pushgateway#about-the-job-and-instance-labels).
 
 # Tests
 

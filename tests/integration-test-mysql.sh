@@ -11,6 +11,7 @@ function cleanup () {
   cleanup_docker_container mysql-test > /dev/null 2>&1
   cleanup_docker_container mysql-test-backup
   cleanup_docker_container mysql-test-cli
+  cleanup_docker_container pushgateway
   docker network rm "${DOCKER_NETWORK}" > /dev/null 2>&1
   rm -rf "${BACKUP_DIRECTORY}"
 }
@@ -48,6 +49,17 @@ function start_cli() {
       "
       while true; do sleep 10; done;
       "
+}
+
+function start_prometheus_pushgateway() {
+  docker run \
+  -d \
+  --rm \
+  --name pushgateway \
+  --network "${DOCKER_NETWORK}" \
+  -p "9091:9091" \
+  prom/pushgateway
+  # TODO: remove port
 }
 
 function reset_db() {
@@ -96,7 +108,7 @@ function restore_backup() {
   backup_file=$(get_backup)
   docker exec -ti mysql-test-cli bash -c \
       "
-      gunzip < \"/backups/${backup_file}\" | mysql -p -h mysql-test -u test -ptest test
+      gunzip < \"/backups/${backup_file}\" | mysql -p -h mysql-test -u test -ptest test;
       "
   check_status $? "Could not restore backup ${backup_file}"
 }
@@ -124,6 +136,46 @@ function verify_cleanup() {
   if [[ "$number_of_backups" -ne 11 ]]; then # DAYS_TO_KEEP=7, + 2 backups executed in tests, + 2 special . and .. files
     check_status -1 "Number of backups remaining after cleanup incorrect."
   fi
+}
+
+function test_pushgateway_fail() {
+    docker run \
+      --rm \
+      --name mysql-test-backup \
+      -e DAYS_TO_KEEP=7 \
+      -e BACKUP_SUFFIX=-test \
+      -e BACKUP_DIR=/backups/ \
+      -e MYSQL_HOST=mysql-test \
+      -e MYSQL_USER=test \
+      -e MYSQL_PASSWORD=test \
+      -e PROMETHEUS_PUSHGATEWAY_URL=http://127.0.0.1:9999 \
+      -v "${BACKUP_DIRECTORY}":/backups/ \
+      --network "${DOCKER_NETWORK}" \
+      "lefeverd/docker-db-backup:${IMAGE_TAG}" mysql_backup
+    check_status $? "Could not execute backup"
+}
+
+function test_pushgateway() {
+    docker run \
+      --rm \
+      --name mysql-test-backup \
+      -e DAYS_TO_KEEP=7 \
+      -e BACKUP_SUFFIX=-test \
+      -e BACKUP_DIR=/backups/ \
+      -e MYSQL_HOST=mysql-test \
+      -e MYSQL_USER=test \
+      -e MYSQL_PASSWORD=test \
+      -e PROMETHEUS_PUSHGATEWAY_URL=http://pushgateway:9091 \
+      -v "${BACKUP_DIRECTORY}":/backups/ \
+      --network "${DOCKER_NETWORK}" \
+      "lefeverd/docker-db-backup:${IMAGE_TAG}" mysql_backup
+    check_status $? "Could not execute backup"
+}
+
+function verify_pushgateway() {
+    test_db_metric='file_size{database="test",host="mysql-test",instance="",job="mysql-test-test",label="Backup file size in Kilobytes"} 4'
+    docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$test_db_metric'"
+    check_status $? "Could not find metric for test database"
 }
 
 function main () {
@@ -156,6 +208,16 @@ function main () {
   start_backup
   echo "Verifying cleanup of backup files"
   verify_cleanup
+  echo "Testing pushgateway failure"
+  test_pushgateway_fail
+  echo "Starting Prometheus Pushgateway"
+  start_prometheus_pushgateway
+  printf "Waiting for Pushgateway to start\n"
+  sleep 10
+  echo "Testing pushgateway"
+  test_pushgateway
+  echo "Verifying pushgateway metrics"
+  verify_pushgateway
   echo "Cleaning up"
   cleanup
 }

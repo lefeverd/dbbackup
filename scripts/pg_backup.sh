@@ -14,6 +14,7 @@ PG_BACKUP_TYPE=${PG_BACKUP_TYPE:-custom}
 DAYS_TO_KEEP=${DAYS_TO_KEEP:-7}
 BACKUP_SUFFIX=${BACKUP_SUFFIX:-}
 BACKUP_DIR=${BACKUP_DIR:-}
+PROMETHEUS_PUSHGATEWAY_URL=${PROMETHEUS_PUSHGATEWAY_URL:-}
 
 function help() {
 	echo "$0"
@@ -44,6 +45,18 @@ function pre_checks() {
     endsWithSlash "$BACKUP_DIR" || BACKUP_DIR="${BACKUP_DIR}/"
 }
 
+function push_metrics() {
+	if [ -n "$PROMETHEUS_PUSHGATEWAY_URL" ]; then
+cat <<EOT | curl --silent --data-binary @- "$PROMETHEUS_PUSHGATEWAY_URL/metrics/job/$1-$2/host/$1" || log "Failed to push metrics to pushgateway at $PROMETHEUS_PUSHGATEWAY_URL" && true
+# TYPE file_size gauge
+file_size{host="$1", database="$2", label="Backup file size in Kilobytes"} $3
+EOT
+		if [[ "$?" -ne 0 ]]; then
+			log "Failed to push metrics to pushgateway at $PROMETHEUS_PUSHGATEWAY_URL"
+		fi
+	fi
+}
+
 function perform_backups() {
     log "Starting backup of all databases"
 
@@ -69,7 +82,9 @@ function perform_backups() {
                 exit 1
             else
                 mv "${backup_filename}.sql.gz.in_progress" "${backup_filename}.sql.gz"
-                log "database: $database - size: $(du ${backup_filename} | cut -f -1) - file: ${backup_filename}" # Use cut to only show bytes (no filename)
+                size=$(du -k ${backup_filename} | cut -f -1)
+                log "database: $database - size (KB): $size - file: ${backup_filename}" # Use cut to only show bytes (no filename)
+                push_metrics "$PGHOST" "$database" "$size"
             fi
         fi
         
@@ -81,7 +96,9 @@ function perform_backups() {
                 exit 1
             else
                 mv "${backup_filename}.dump.in_progress" "${backup_filename}.dump"
-                log "database $database - size: $(du ${backup_filename}.dump  | cut -f -1) - file: ${backup_filename}.dump" # Use cut to only show bytes (no filename)
+                size=$(du -k ${backup_filename}.dump  | cut -f -1)
+                log "database $database - size (KB): $size - file: ${backup_filename}.dump" # Use cut to only show bytes (no filename)
+                push_metrics "$PGHOST" "$database" "$size"
             fi
         fi
         
