@@ -4,7 +4,7 @@ LABEL maintainer="David Lefever <lefever.d@gmail.com>"
 
 RUN apk update
 RUN apk add --no-cache bash
-RUN apk add --no-cache postgresql-client mysql-client
+RUN apk add --no-cache postgresql-client mysql-client curl
 
 COPY scripts/pg_backup.sh /usr/local/bin/pg_backup
 COPY scripts/mysql_backup.sh /usr/local/bin/mysql_backup

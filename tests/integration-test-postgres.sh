@@ -11,6 +11,7 @@ function cleanup () {
   cleanup_docker_container postgres-test > /dev/null 2>&1
   cleanup_docker_container postgres-test-backup
   cleanup_docker_container postgres-test-cli
+  cleanup_docker_container pushgateway
   docker network rm "${DOCKER_NETWORK}" > /dev/null 2>&1
   rm -rf "${BACKUP_DIRECTORY}"
 }
@@ -42,11 +43,20 @@ function start_cli() {
       "
 }
 
+function start_prometheus_pushgateway() {
+  docker run \
+  -d \
+  --rm \
+  --name pushgateway \
+  --network "${DOCKER_NETWORK}" \
+  prom/pushgateway
+}
+
 function reset_db() {
   cleanup_docker_container postgres-test
   start_db
   printf "Waiting for postgres to start\n"
-  sleep 5
+  sleep 10
   output=$(docker exec -ti postgres-test-cli bash -c \
       "
       psql -d test -c \"select * from users\";
@@ -119,6 +129,47 @@ function verify_cleanup() {
   fi
 }
 
+function test_pushgateway_fail() {
+    docker run \
+      --rm \
+      --name postgres-test-backup \
+      -e DAYS_TO_KEEP=7 \
+      -e BACKUP_SUFFIX=-test \
+      -e BACKUP_DIR=/backups/ \
+      -e PGHOST=postgres-test \
+      -e PGUSER=postgres \
+      -e PROMETHEUS_PUSHGATEWAY_URL=http://127.0.0.1:9999 \
+      -v "${BACKUP_DIRECTORY}":/backups/ \
+      --network "${DOCKER_NETWORK}" \
+      "lefeverd/docker-db-backup:${IMAGE_TAG}"
+    check_status $? "Could not execute backup"
+}
+
+function test_pushgateway() {
+    docker run \
+      --rm \
+      --name postgres-test-backup \
+      -e DAYS_TO_KEEP=7 \
+      -e BACKUP_SUFFIX=-test \
+      -e BACKUP_DIR=/backups/ \
+      -e PGHOST=postgres-test \
+      -e PGUSER=postgres \
+      -e PROMETHEUS_PUSHGATEWAY_URL=http://pushgateway:9091 \
+      -v "${BACKUP_DIRECTORY}":/backups/ \
+      --network "${DOCKER_NETWORK}" \
+      "lefeverd/docker-db-backup:${IMAGE_TAG}"
+    check_status $? "Could not execute backup"
+}
+
+function verify_pushgateway() {
+    postgres_db_metric='file_size{database="postgres",host="postgres-test",instance="",job="postgres-test-postgres",label="Backup file size in Kilobytes"} 4'
+    test_db_metric='file_size{database="test",host="postgres-test",instance="",job="postgres-test-test",label="Backup file size in Kilobytes"} 4'
+    docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$postgres_db_metric'"
+    check_status $? "Could not find metric for postgres database"
+    docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$test_db_metric'"
+    check_status $? "Could not find metric for test database"
+}
+
 function main () {
   mkdir -p "${BACKUP_DIRECTORY}/"
   echo "Building image"
@@ -132,7 +183,7 @@ function main () {
   echo "Starting cli container"
   start_cli
   printf "Waiting for postgres to start\n"
-  sleep 5
+  sleep 10
   echo "Adding test data"
   seed_db
   printf "Starting backup\n"
@@ -149,6 +200,16 @@ function main () {
   start_backup
   echo "Verifying cleanup of backup files"
   verify_cleanup
+  echo "Testing pushgateway failure"
+  test_pushgateway_fail
+  echo "Starting Prometheus Pushgateway"
+  start_prometheus_pushgateway
+  printf "Waiting for Pushgateway to start\n"
+  sleep 10
+  echo "Testing pushgateway"
+  test_pushgateway
+  echo "Verifying pushgateway metrics"
+  verify_pushgateway
   cleanup
 }
 
