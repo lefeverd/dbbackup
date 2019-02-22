@@ -49,9 +49,7 @@ function start_prometheus_pushgateway() {
   --rm \
   --name pushgateway \
   --network "${DOCKER_NETWORK}" \
-  -p "9091:9091" \
   prom/pushgateway
-  # TODO: remove port
 }
 
 function reset_db() {
