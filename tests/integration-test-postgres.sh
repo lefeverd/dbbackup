@@ -162,8 +162,8 @@ function test_pushgateway() {
 }
 
 function verify_pushgateway() {
-    postgres_db_metric='file_size{database="postgres",host="postgres-test",instance="",job="postgres-test-postgres",label="Backup file size in Kilobytes"} 4'
-    test_db_metric='file_size{database="test",host="postgres-test",instance="",job="postgres-test-test",label="Backup file size in Kilobytes"} 4'
+    postgres_db_metric='database_backup_file_size{database="postgres",host="postgres-test",instance="",job="postgres-test-postgres",label="Backup file size in Kilobytes"} 4'
+    test_db_metric='database_backup_file_size{database="test",host="postgres-test",instance="",job="postgres-test-test",label="Backup file size in Kilobytes"} 4'
     docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$postgres_db_metric'"
     check_status $? "Could not find metric for postgres database"
     docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$test_db_metric'"

@@ -44,8 +44,8 @@ function push_metrics() {
 	if [ -n "$PROMETHEUS_PUSHGATEWAY_URL" ]; then
 	# Labels (key/values) in URL (after job/jobname) are used as grouping key
 cat <<EOT | curl --silent --data-binary @- "$PROMETHEUS_PUSHGATEWAY_URL/metrics/job/$1-$2/host/$1" || log "Failed to push metrics to pushgateway at $PROMETHEUS_PUSHGATEWAY_URL" && true
-# TYPE file_size gauge
-file_size{database="$2", label="Backup file size in Kilobytes"} $3
+# TYPE database_backup_file_size gauge
+database_backup_file_size{database="$2", label="Backup file size in Kilobytes"} $3
 EOT
 		if [[ "$?" -ne 0 ]]; then
 			log "Failed to push metrics to pushgateway at $PROMETHEUS_PUSHGATEWAY_URL"

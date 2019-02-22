@@ -171,7 +171,7 @@ function test_pushgateway() {
 }
 
 function verify_pushgateway() {
-    test_db_metric='file_size{database="test",host="mysql-test",instance="",job="mysql-test-test",label="Backup file size in Kilobytes"} 4'
+    test_db_metric='database_backup_file_size{database="test",host="mysql-test",instance="",job="mysql-test-test",label="Backup file size in Kilobytes"} 4'
     docker exec -ti pushgateway sh -c "wget -q -O - 127.0.0.1:9091/metrics | grep -q '$test_db_metric'"
     check_status $? "Could not find metric for test database"
 }

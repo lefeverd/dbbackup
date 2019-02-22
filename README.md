@@ -152,6 +152,10 @@ This image supports it by setting the `PROMETHEUS_PUSHGATEWAY_URL` environment v
 You should set the `honor_labels` to `true` in Prometheus' scrape configuration for the Pushgateway,
 as described [here](https://github.com/prometheus/pushgateway#about-the-job-and-instance-labels).
 
+The following metrics are pushed:
+
+- database_backup_file_size
+
 # Tests
 
 Some basic tests can be run to ensure that the backups are correctly executed and can be restored.
