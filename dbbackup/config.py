@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv(verbose=True)
 
 # General
 DAYS_TO_KEEP = os.environ.get("DAYS_TO_KEEP", 7)
@@ -23,3 +26,4 @@ PG_BACKUP_TYPE = os.environ.get("PG_BACKUP_TYPE", False)
 MYSQL_HOST = os.environ.get("MYSQL_HOST", False)
 MYSQL_USER = os.environ.get("MYSQL_USER", False)
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", False)
+MYSQL_BIN_DIRECTORY = os.environ.get("MYSQL_BIN", "/usr/local/bin/")

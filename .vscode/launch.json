@@ -17,6 +17,7 @@
             "request": "launch",
             "module": "dbbackup",
             "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
             "args": [
                 "--provider",
                 "mysql",
@@ -30,7 +31,11 @@
             "stopOnEntry": false,
             "pythonPath": "${config:python.pythonPath}",
             "module": "pytest",
-            "args": ["-sv", "tests/"],
+            "args": [
+                "-sv", 
+                "tests/", 
+                // "-k", "test_get_provider_mysql"
+            ],
             "cwd": "${workspaceRoot}",
             "env": {},
             "envFile": "${workspaceRoot}/.fake.env",
