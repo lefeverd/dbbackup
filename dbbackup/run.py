@@ -1,5 +1,6 @@
 import logging
 import click
+import os
 
 from dbbackup import config
 from dbbackup import providers
@@ -10,6 +11,11 @@ _logger = logging.getLogger(__package__)
 def configure_logging():
     logging.basicConfig(level=config.LOG_LEVEL.upper())
     _logger.debug("logging configured")
+
+
+def create_backup_directory():
+    _logger.debug("Creating backup directory")
+    os.makedirs(config.BACKUP_DIRECTORY)
 
 
 @click.group()
@@ -46,6 +52,7 @@ def list_command(ctx):
 
 def main():
     configure_logging()
+    create_backup_directory()
     cligroup()
 
 

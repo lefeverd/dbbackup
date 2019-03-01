@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
+# Storage (required)
+BACKUP_DIRECTORY = os.environ["BACKUP_DIRECTORY"]
+
 # General
 DAYS_TO_KEEP = os.environ.get("DAYS_TO_KEEP", 7)
 BACKUP_SUFFIX = os.environ.get("BACKUP_SUFFIX", False)
@@ -12,9 +15,6 @@ LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 # Prometheus Pushgateway - metrics
 PROMETHEUS_PUSHGATEWAY_URL = os.environ.get("PROMETHEUS_PUSHGATEWAY_URL",
                                             False)
-
-# Storage
-BACKUP_DIRECTORY = os.environ.get("BACKUP_DIRECTORY", False)
 
 # Provider - Postgres
 PGHOST = os.environ.get("PGHOST", False)
