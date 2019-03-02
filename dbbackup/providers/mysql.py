@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import shutil
 import os
+from datetime import datetime
 
 from dbbackup.providers import AbstractProvider
 from dbbackup import config
@@ -42,13 +43,19 @@ class MySQL(AbstractProvider):
         _logger.debug(f"command: {get_db_cmd}")
         _logger.debug(f"command (str): {(' ').join(get_db_cmd)}")
         databases = subprocess.check_output(get_db_cmd).splitlines()
-        databases = [
-            database.decode('utf-8') for database in databases
-            if database.decode('utf-8') not in self.exclude_databases
-        ]
+        databases = [database.decode('utf-8') for database in databases]
         return databases
 
-    def _backup_database(self, database):
+    def construct_backup_filename(self, database):
+        date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        suffix = config.BACKUP_SUFFIX or ""
+        return f"{date_str}-{database}{suffix}.sql"
+
+    def get_backup_absolute_file(self, database):
+        filename = self.construct_backup_filename(database)
+        return Path(config.BACKUP_DIRECTORY + '/' + filename).resolve()
+
+    def backup_database(self, database):
         _logger.debug(f"Starting backup for database {database}")
         mysqldump_bin = str(
             Path(self.mysql_bin_directory + '/mysqldump').resolve())
@@ -61,19 +68,25 @@ class MySQL(AbstractProvider):
         try:
             _logger.debug(f"Starting backup in file {path}")
             output = subprocess.check_call(backup_cmd, stdout=fd)
-            output_file = Path(config.BACKUP_DIRECTORY + '/' +
-                               f"{database}.sql").resolve()
+            output_file = self.get_backup_absolute_file(database)
             _logger.debug(f"Copying file to final destination {output_file}")
             shutil.copy(path, str(output_file))
+            _logger.debug("Done")
         finally:
+            _logger.debug("Removing temporary file")
             os.remove(path)
-        _logger.debug(output)
+            _logger.debug("Done")
+        _logger.debug(f"Command output: {output}")
 
     def execute_backup(self):
         databases = self.get_databases()
+        databases = [
+            database for database in databases
+            if database not in self.exclude_databases
+        ]
         _logger.debug(f"Found databases: {databases}")
         for database in databases:
-            self._backup_database(database)
+            self.backup_database(database)
 
     def list_backups(self):
         print("Listing backups")

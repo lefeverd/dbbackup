@@ -19,7 +19,7 @@
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                "--provider",
+                //"--provider",
                 "mysql",
                 "backup"
             ]

@@ -15,45 +15,37 @@ def configure_logging():
 
 def create_backup_directory():
     _logger.debug("Creating backup directory")
-    os.makedirs(config.BACKUP_DIRECTORY)
+    os.makedirs(config.BACKUP_DIRECTORY, exist_ok=True)
+
+
+class DatabaseCommand(click.MultiCommand):
+    def __init__(self, name, *args, **kwargs):
+        super().__init__(name, *args, **kwargs)
+        self.provider = providers.get(name)
+        self.commands = {
+            "backup": getattr(self.provider, "execute_backup"),
+            "list": getattr(self.provider, "list_backups"),
+        }
+
+    def list_commands(self, ctx):
+        return self.commands.keys()
+
+    def get_command(self, ctx, cmd_name):
+        return click.Command(
+            cmd_name, callback=self.commands.get(cmd_name, None))
 
 
 @click.group()
-@click.option(
-    '--provider',
-    default=config.PROVIDER,
-    type=click.Choice(['mysql', 'postgres']))
-@click.pass_context
-def cligroup(ctx, provider):
-    ctx.ensure_object(dict)
-    ctx.obj['provider_name'] = provider
-    ctx.obj['provider'] = providers.get(provider)
-
-
-def invoke(ctx, command):
-    provider = ctx.obj.get('provider', False)
-    if not provider:
-        raise Exception("Could not get provider from ctx.")
-    _logger.debug(f"Executing {command} on {provider}")
-    getattr(provider, command)()
-
-
-@cligroup.command(name="backup")
-@click.pass_context
-def backup_command(ctx):
-    invoke(ctx, "execute_backup")
-
-
-@cligroup.command(name="list")
-@click.pass_context
-def list_command(ctx):
-    invoke(ctx, "list_backups")
+def cliroot():
+    pass
 
 
 def main():
     configure_logging()
     create_backup_directory()
-    cligroup()
+    mysql_commands = DatabaseCommand("mysql")
+    cliroot.add_command(mysql_commands)
+    cliroot()
 
 
 if __name__ == "__main__":

@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
-# Storage (required)
-BACKUP_DIRECTORY = os.environ["BACKUP_DIRECTORY"]
+try:
+    BACKUP_DIRECTORY = os.environ["BACKUP_DIRECTORY"]
+except KeyError as e:
+    raise Exception(f"Required environment variable {e} is not set.")
 
 # General
 DAYS_TO_KEEP = os.environ.get("DAYS_TO_KEEP", 7)
