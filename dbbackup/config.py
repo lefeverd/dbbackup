@@ -3,6 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
+
+def get_bool(value):
+    return value == "1" or value == "t" or value == "true" or value == "True"
+
+
 try:
     BACKUP_DIRECTORY = os.environ["BACKUP_DIRECTORY"]
 except KeyError as e:
@@ -29,3 +34,4 @@ MYSQL_HOST = os.environ.get("MYSQL_HOST", False)
 MYSQL_USER = os.environ.get("MYSQL_USER", False)
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", False)
 MYSQL_BIN_DIRECTORY = os.environ.get("MYSQL_BIN", "/usr/local/bin/")
+MYSQL_COMPRESS = get_bool(os.environ.get("MYSQL_COMPRESS", False))

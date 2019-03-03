@@ -16,6 +16,7 @@ class MySQLConfigBuilder:
             config.MYSQL_HOST,
             config.MYSQL_USER,
             config.MYSQL_PASSWORD,
-            mysql_bin_directory=config.MYSQL_BIN_DIRECTORY)
+            mysql_bin_directory=config.MYSQL_BIN_DIRECTORY,
+            compress=config.MYSQL_COMPRESS)
         self._instance = instance
         return instance

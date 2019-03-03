@@ -12,16 +12,27 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Module",
+            "name": "Python: mysql backup",
             "type": "python",
             "request": "launch",
             "module": "dbbackup",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "args": [
-                //"--provider",
                 "mysql",
                 "backup"
+            ]
+        },
+        {
+            "name": "Python: mysql list",
+            "type": "python",
+            "request": "launch",
+            "module": "dbbackup",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "mysql",
+                "list"
             ]
         },
         {
