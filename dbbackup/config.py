@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
@@ -9,7 +10,7 @@ def get_bool(value):
 
 
 try:
-    BACKUP_DIRECTORY = os.environ["BACKUP_DIRECTORY"]
+    BACKUP_DIRECTORY = str(Path(os.environ["BACKUP_DIRECTORY"]).resolve())
 except KeyError as e:
     raise Exception(f"Required environment variable {e} is not set.")
 

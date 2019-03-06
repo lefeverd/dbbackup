@@ -1,14 +1,13 @@
 import logging
 from pathlib import Path
 import subprocess
-import tempfile
-import shutil
 import os
 from datetime import datetime
 import re
 
 from dbbackup.providers import AbstractProvider
 from dbbackup import config
+from dbbackup.tempbackupfile import TemporaryBackupFile
 from dbbackup.utils import sizeof_fmt
 
 _logger = logging.getLogger(__name__)
@@ -32,6 +31,7 @@ class MySQL(AbstractProvider):
         self.password = password
         self.mysql_bin_directory = mysql_bin_directory
         self.exclude_databases = exclude_databases
+        self.compress = compress
 
     def _get_default_command_args(self):
         args = ['-h', self.host, '-u', self.user]
@@ -62,20 +62,13 @@ class MySQL(AbstractProvider):
 
     def backup_database(self, database):
         _logger.debug(f"Starting backup for database {database}")
-        backup_cmd = self.get_backup_command(database)
-        fd, path = tempfile.mkstemp()
-        try:
-            _logger.debug(f"Starting backup in file {path}")
-            output = subprocess.check_call(backup_cmd, stdout=fd)
-            output_file = self.get_backup_absolute_file(database)
-            _logger.debug(f"Copying file to final destination {output_file}")
-            shutil.copy(path, output_file)
-            _logger.debug("Done")
-        finally:
-            _logger.debug("Removing temporary file")
-            os.remove(path)
-            _logger.debug("Done")
-        _logger.debug(f"Command output: {output}")
+        filename = self.construct_backup_filename(database)
+        with TemporaryBackupFile(filename, config.BACKUP_DIRECTORY,
+                                 self.compress) as temp_file:
+            backup_cmd = self.get_backup_command(database)
+            output = subprocess.check_call(backup_cmd, stdout=temp_file)
+            _logger.debug(f"Command output: {output}")
+        _logger.debug("Done")
 
     def get_backup_command(self, database):
         mysqldump_bin = str(
@@ -86,15 +79,6 @@ class MySQL(AbstractProvider):
         _logger.debug(f"command: {backup_cmd}")
         _logger.debug(f"command (str): {(' ').join(backup_cmd)}")
         return backup_cmd
-
-    def get_backup_absolute_directory(self):
-        return str(Path(config.BACKUP_DIRECTORY).resolve())
-
-    def get_backup_absolute_file(self, database):
-        filename = self.construct_backup_filename(database)
-        return str(
-            Path(self.get_backup_absolute_directory() + '/' +
-                 filename).resolve())
 
     def construct_backup_filename(self, database):
         date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
