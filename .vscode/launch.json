@@ -45,7 +45,7 @@
             "args": [
                 "-sv", 
                 "tests/", 
-                // "-k", "test_get_provider_mysql"
+                //"-k", "test_context_manager"
             ],
             "cwd": "${workspaceRoot}",
             "env": {},
@@ -54,7 +54,8 @@
               "WaitOnAbnormalExit",
               "WaitOnNormalExit",
               "RedirectOutput"
-            ]
+            ],
+            "debugStdLib": true,
           },
     ]
 }

@@ -8,3 +8,6 @@ init:
 
 test:
 	./venv/bin/pytest tests/
+
+coverage:
+	./venv/bin/pytest --cov=dbbackup --cov-report html tests/

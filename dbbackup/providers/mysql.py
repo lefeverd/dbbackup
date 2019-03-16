@@ -87,21 +87,20 @@ class MySQL(AbstractProvider):
 
     def list_backups(self):
         _logger.debug("Listing backups")
+        _logger.info(f"Backup directory: {config.BACKUP_DIRECTORY}")
         backup_files = self.get_backups()
         for backup_file in backup_files:
             self.display_backup(backup_file)
 
     def display_backup(self, backup_file):
         size = os.stat(
-            str(
-                Path(self.get_backup_absolute_directory() + "/" +
+            str(Path(config.BACKUP_DIRECTORY + "/" +
                      backup_file).resolve())).st_size
         print(f"{backup_file}\t{sizeof_fmt(size)}")
 
     def get_backups(self):
-        directory = self.get_backup_absolute_directory()
         backup_files = [
-            a_file for a_file in os.listdir(directory)
+            a_file for a_file in os.listdir(config.BACKUP_DIRECTORY)
             if self.is_backup(a_file)
         ]
         backup_files.sort(reverse=True)
