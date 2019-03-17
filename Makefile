@@ -7,7 +7,4 @@ init:
 	./venv/bin/pip install -r requirements.txt
 
 test:
-	./venv/bin/pytest tests/
-
-coverage:
 	./venv/bin/pytest --cov=dbbackup --cov-report html tests/

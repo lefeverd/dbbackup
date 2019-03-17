@@ -50,27 +50,31 @@ class MySQL(AbstractProvider):
             self.backup_database(database)
 
     def get_databases(self):
-        mysql_bin = str(Path(self.mysql_bin_directory + '/mysql').resolve())
-        get_db_cmd = [mysql_bin]
-        get_db_cmd += self._get_default_command_args()
-        get_db_cmd += ['--skip-column-names', '-e', 'SHOW DATABASES;']
-        _logger.debug(f"command: {get_db_cmd}")
-        _logger.debug(f"command (str): {(' ').join(get_db_cmd)}")
+        get_db_cmd = self._get_databases_command()
         databases = subprocess.check_output(get_db_cmd).splitlines()
         databases = [database.decode('utf-8') for database in databases]
         return databases
+
+    def _get_databases_command(self):
+        mysql_bin = str(Path(self.mysql_bin_directory + '/mysql').resolve())
+        command = [mysql_bin]
+        command += self._get_default_command_args()
+        command += ['--skip-column-names', '-e', 'SHOW DATABASES;']
+        _logger.debug(f"command: {command}")
+        _logger.debug(f"command (str): {(' ').join(command)}")
+        return command
 
     def backup_database(self, database):
         _logger.debug(f"Starting backup for database {database}")
         filename = self.construct_backup_filename(database)
         with TemporaryBackupFile(filename, config.BACKUP_DIRECTORY,
                                  self.compress) as temp_file:
-            backup_cmd = self.get_backup_command(database)
+            backup_cmd = self._get_backup_command(database)
             output = subprocess.check_call(backup_cmd, stdout=temp_file)
             _logger.debug(f"Command output: {output}")
         _logger.debug("Done")
 
-    def get_backup_command(self, database):
+    def _get_backup_command(self, database):
         mysqldump_bin = str(
             Path(self.mysql_bin_directory + '/mysqldump').resolve())
         backup_cmd = [mysqldump_bin]
