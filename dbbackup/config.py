@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(verbose=True)
+ENV_FILE = os.environ.get("ENV_FILE", None)
+env_path = Path('.') / (ENV_FILE or '.env')
+
+load_dotenv(dotenv_path=env_path, verbose=True)
 
 
 def get_bool(value):
@@ -32,7 +35,7 @@ PG_BACKUP_TYPE = os.environ.get("PG_BACKUP_TYPE", False)
 
 # Provider - MySQL
 MYSQL_HOST = os.environ.get("MYSQL_HOST", False)
-MYSQL_USER = os.environ.get("MYSQL_USER", False)
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD", False)
-MYSQL_BIN_DIRECTORY = os.environ.get("MYSQL_BIN", "/usr/local/bin/")
+MYSQL_BIN_DIRECTORY = os.environ.get("MYSQL_BIN_DIRECTORY", "/usr/local/bin/")
 MYSQL_COMPRESS = get_bool(os.environ.get("MYSQL_COMPRESS", False))

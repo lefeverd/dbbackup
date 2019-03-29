@@ -57,5 +57,27 @@
             ],
             "debugStdLib": true,
           },
+          {
+            "name": "PyTest integration",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/", 
+                //"-k", "test_backup_database"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {},
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "debugStdLib": true,
+          },
     ]
 }

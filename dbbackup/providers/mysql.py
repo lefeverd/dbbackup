@@ -55,10 +55,14 @@ class MySQL(AbstractProvider):
         databases = [database.decode('utf-8') for database in databases]
         return databases
 
-    def _get_databases_command(self):
+    def _get_command(self):
         mysql_bin = str(Path(self.mysql_bin_directory + '/mysql').resolve())
         command = [mysql_bin]
         command += self._get_default_command_args()
+        return command
+
+    def _get_databases_command(self):
+        command = self._get_command()
         command += ['--skip-column-names', '-e', 'SHOW DATABASES;']
         _logger.debug(f"command: {command}")
         _logger.debug(f"command (str): {(' ').join(command)}")
@@ -85,9 +89,12 @@ class MySQL(AbstractProvider):
         return backup_cmd
 
     def construct_backup_filename(self, database):
-        date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        date_str = self._get_formatted_current_datetime()
         suffix = config.BACKUP_SUFFIX or ""
         return f"{date_str}-{database}{suffix}.sql"
+
+    def _get_formatted_current_datetime(self):
+        return datetime.now().strftime("%Y%m%d_%H%M%S")
 
     def list_backups(self):
         _logger.debug("Listing backups")

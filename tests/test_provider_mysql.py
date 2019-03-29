@@ -1,9 +1,11 @@
+import unittest
 from unittest import mock
 from dbbackup.providers import mysql
+from dbbackup.run import create_backup_directory
 from tempfile import _TemporaryFileWrapper
 
 
-class TestMysqlProvider:
+class TestMysqlProvider(unittest.TestCase):
     def test_default_command_args_default_values(self):
         provider = mysql.MySQL()
         args = provider._get_default_command_args()
@@ -43,10 +45,13 @@ class TestMysqlProvider:
             mock.call(provider, 'test_database2')
         ])
 
+    @mock.patch('dbbackup.providers.mysql.TemporaryBackupFile.close')
     @mock.patch('dbbackup.providers.mysql.subprocess.check_call')
     @mock.patch('dbbackup.providers.mysql.MySQL._get_backup_command')
-    def test_backup_database(self, _get_backup_command, mock_check_call):
+    def test_backup_database(self, _get_backup_command, mock_check_call,
+                             mock_close):
         _get_backup_command.return_value = "cmd"
+        mock_close.return_value = True
         provider = mysql.MySQL()
         provider.backup_database('test_database')
         assert mock_check_call.call_args[0][0] == 'cmd'

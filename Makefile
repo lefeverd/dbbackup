@@ -8,3 +8,9 @@ init:
 
 test:
 	./venv/bin/pytest --cov=dbbackup --cov-report html tests/
+
+testint:
+	./venv/bin/pytest tests_integration/
+
+localdrone:
+	drone exec

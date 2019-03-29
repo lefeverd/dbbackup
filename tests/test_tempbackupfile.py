@@ -1,10 +1,11 @@
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from dbbackup import tempbackupfile
 
 
-class TestTempbackupfile:
+class TestTempbackupfile(unittest.TestCase):
     def test_copy_to_destination(self):
         with TemporaryDirectory() as tmpdir:
             tempfile = tempbackupfile.TemporaryBackupFile("tmpname", tmpdir)

@@ -1,9 +1,10 @@
+import unittest
 from pytest import raises
 
 from dbbackup import providers
 
 
-class TestBuilder:
+class TestBuilder(unittest.TestCase):
     def test_get_builder_module_mysql(self):
         module = providers.get_builder_module('mysql')
         assert module is not None
