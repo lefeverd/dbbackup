@@ -67,7 +67,7 @@
             "args": [
                 "-sv", 
                 "tests_integration/", 
-                //"-k", "test_backup_database"
+                //"-k", "test_backup_correctly_done"
             ],
             "cwd": "${workspaceRoot}",
             "env": {},

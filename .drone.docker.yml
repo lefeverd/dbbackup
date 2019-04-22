@@ -1,0 +1,40 @@
+kind: pipeline
+name: default
+
+steps:
+- name: unit tests
+  image: python
+  commands:
+  - pip install -r requirements.txt
+  - ls -la /tmp/
+  - pytest tests/
+
+- name: test mysql
+  image: mysql
+  commands:
+  - sleep 15
+  - mysql -u root -h database --execute="SELECT VERSION();"
+
+- name: build docker image
+  image: docker:17.05.0-ce-dind
+  environment:
+    DOCKER_HOST: tcp://docker:2375
+  commands:
+    - sleep 5
+    - docker ps
+    - docker build -t pydbbackup .
+
+# TODO: test docker image
+
+services:
+- name: database
+  image: mysql
+  ports:
+  - 3306
+  environment:
+    MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    MYSQL_DATABASE: test
+
+- name: docker
+  image: docker:17.05.0-ce-dind
+  privileged: true

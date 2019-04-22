@@ -4,6 +4,9 @@ import subprocess
 import os
 from datetime import datetime
 import re
+import tarfile
+import tempfile
+import shutil
 
 from dbbackup.providers import AbstractProvider
 from dbbackup import config
@@ -119,5 +122,49 @@ class MySQL(AbstractProvider):
 
     def is_backup(self, a_file):
         return (re.search(r"^\d{8}_\d{6}.*", a_file)
-                and (a_file.endswith(".sql") or a_file.endswith(".tar.gz"))
+                and (a_file.endswith(".sql") or a_file.endswith(".gz"))
                 and config.BACKUP_SUFFIX in a_file)
+
+    def restore_backup(self, backup_file, force=None):
+        backup_file_path = Path(backup_file)
+        if not backup_file_path.is_absolute():
+            backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
+            backup_file_path = backup_file_path.resolve()
+
+        if not backup_file_path.exists():
+            raise Exception(f"File {backup_file_path} does not exist.")
+
+        try:
+            backup_file_path.relative_to(config.BACKUP_DIRECTORY)
+        except ValueError:
+            raise Exception(
+                f"File {backup_file} is not inside BACKUP_DIRECTORY \
+                    {config.BACKUP_DIRECTORY}")
+
+        backup_file = str(backup_file_path)
+        tmpdir = None
+        if not self.is_backup(backup_file_path.name):
+            raise Exception(f"File {backup_file} is not a valid backup.")
+
+        if backup_file.endswith(".gz"):
+            tmpdir = tempfile.mkdtemp()
+            with tarfile.open(backup_file) as tf:
+                tf.extractall(path=tmpdir)
+            backup_file = Path(tmpdir) / Path(backup_file).name[:-3]
+
+        command = self._get_restore_command()
+        backup_file_fd = open(backup_file)
+
+        proc = subprocess.run(
+            command, stdin=backup_file_fd, stdout=subprocess.PIPE)
+        _logger.debug(f"Restore process retcode {proc.returncode}")
+
+        if tmpdir:
+            try:
+                shutil.rmtree(tmpdir)
+            except Exception:
+                _logger.warn(f"Could not delete temporary directory {tmpdir}")
+
+    def _get_restore_command(self):
+        command = self._get_command()
+        return command
