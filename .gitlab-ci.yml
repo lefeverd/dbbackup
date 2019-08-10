@@ -6,7 +6,7 @@ services:
 stages:
   - build
   - test
-  #- test-integration
+  - test-integration
   - release
 
 variables:
@@ -44,6 +44,21 @@ test:
         -e "LOG_LEVEL=DEBUG"
         --entrypoint pytest
         $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests
+
+test-integration:
+  <<: *docker
+  stage: test-integration
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "BACKUP_DIRECTORY=/tmp/"
+        -e "MYSQL_HOST=localhost"
+        -e "MYSQL_PASSWORD=test"
+        -e "LOG_LEVEL=DEBUG"
+        -e "BACKUP_SUFFIX=-daily"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration
 
 release:
   <<: *docker

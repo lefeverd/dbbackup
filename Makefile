@@ -7,7 +7,7 @@ init:
 	./venv/bin/pip install -r requirements.txt
 
 test:
-	./venv/bin/pytest --cov=dbbackup --cov-report html tests/
+	ENV_FILE=.env.test ./venv/bin/pytest --cov=dbbackup --cov-report html tests/
 
 testint:
-	./venv/bin/pytest tests_integration/
+	ENV_FILE=.env.test ./venv/bin/pytest tests_integration/
