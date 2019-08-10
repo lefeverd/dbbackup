@@ -47,7 +47,6 @@ test:
 
 release:
   <<: *docker
-  <<: *only
   stage: release
   script:
     - export RELEASE_DATE=`date +%Y%m%d-%H%M%S`
