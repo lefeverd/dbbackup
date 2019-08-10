@@ -28,9 +28,6 @@ build:
     - docker build --pull -t $DOCKER_IMAGE:$DOCKER_IMAGE_TAG -f Dockerfile .
     - docker push $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
 
-# For the postgres hostname, in kubernetes executor, services are in same pod (different container), 
-# see https://gitlab.com/gitlab-org/gitlab-runner/issues/2677#note_67671527
-# That's why we set it to localhost.
 test:
   <<: *docker
   stage: test
@@ -45,6 +42,9 @@ test:
         --entrypoint pytest
         $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests
 
+# For the mysql hostname, in kubernetes executor, services are in same pod (different container), 
+# see https://gitlab.com/gitlab-org/gitlab-runner/issues/2677#note_67671527
+# That's why we set it to localhost.
 test-integration:
   <<: *docker
   stage: test-integration
@@ -53,7 +53,7 @@ test-integration:
     - > 
         docker run 
         -e "BACKUP_DIRECTORY=/tmp/"
-        -e "MYSQL_HOST=localhost"
+        -e "MYSQL_HOST=127.0.0.1"
         -e "MYSQL_PASSWORD=test"
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
