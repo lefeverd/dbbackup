@@ -11,6 +11,3 @@ test:
 
 testint:
 	./venv/bin/pytest tests_integration/
-
-localdrone:
-	drone exec

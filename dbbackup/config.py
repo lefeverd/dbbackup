@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 ENV_FILE = os.environ.get("ENV_FILE", None)
 env_path = Path('.') / (ENV_FILE or '.env')
 
-load_dotenv(dotenv_path=env_path, verbose=True)
+load_dotenv(dotenv_path=env_path, verbose=False)
 
 
 def get_bool(value):

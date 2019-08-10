@@ -59,7 +59,10 @@ class MySQL(AbstractProvider):
         return databases
 
     def _get_command(self):
-        mysql_bin = str(Path(self.mysql_bin_directory + '/mysql').resolve())
+        mysql_bin_path = Path(self.mysql_bin_directory + '/mysql')
+        mysql_bin = str(mysql_bin_path.resolve())
+        if not mysql_bin_path.exists():
+            raise Exception(f"mysql binary not found: {mysql_bin}")
         command = [mysql_bin]
         command += self._get_default_command_args()
         return command
@@ -72,14 +75,14 @@ class MySQL(AbstractProvider):
         return command
 
     def backup_database(self, database):
-        _logger.debug(f"Starting backup for database {database}")
+        _logger.info(f"Starting backup for database {database}")
         filename = self.construct_backup_filename(database)
         with TemporaryBackupFile(filename, config.BACKUP_DIRECTORY,
                                  self.compress) as temp_file:
             backup_cmd = self._get_backup_command(database)
             output = subprocess.check_call(backup_cmd, stdout=temp_file)
             _logger.debug(f"Command output: {output}")
-        _logger.debug("Done")
+        _logger.info("Done")
 
     def _get_backup_command(self, database):
         mysqldump_bin = str(
@@ -121,9 +124,11 @@ class MySQL(AbstractProvider):
         return backup_files
 
     def is_backup(self, a_file):
-        return (re.search(r"^\d{8}_\d{6}.*", a_file)
-                and (a_file.endswith(".sql") or a_file.endswith(".gz"))
-                and config.BACKUP_SUFFIX in a_file)
+
+        return (
+            re.search(r"^\d{8}_\d{6}.*", a_file)
+            and (a_file.endswith(".sql") or a_file.endswith(".gz")) and
+            (config.BACKUP_SUFFIX in a_file if config.BACKUP_SUFFIX else True))
 
     def restore_backup(self, backup_file, force=None):
         backup_file_path = Path(backup_file)

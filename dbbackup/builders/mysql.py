@@ -12,11 +12,16 @@ class MySQLConfigBuilder:
         self._instance = None
 
     def __call__(self):
-        instance = MySQL(
-            config.MYSQL_HOST,
-            config.MYSQL_USER,
-            config.MYSQL_PASSWORD,
-            mysql_bin_directory=config.MYSQL_BIN_DIRECTORY,
-            compress=config.MYSQL_COMPRESS)
+        kwargs = {
+            "mysql_bin_directory": config.MYSQL_BIN_DIRECTORY,
+            "compress": config.MYSQL_COMPRESS
+        }
+        if config.MYSQL_HOST:
+            kwargs["host"] = config.MYSQL_HOST
+        if config.MYSQL_USER:
+            kwargs["user"] = config.MYSQL_USER
+        if config.MYSQL_PASSWORD:
+            kwargs["password"] = config.MYSQL_PASSWORD
+        instance = MySQL(**kwargs)
         self._instance = instance
         return instance
