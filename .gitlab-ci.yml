@@ -45,7 +45,8 @@ test:
 
 # For the mysql hostname, in kubernetes executor, services are in same pod (different container), 
 # see https://gitlab.com/gitlab-org/gitlab-runner/issues/2677#note_67671527
-# That's why we set it to localhost.
+# The twist here is that we run dind, so it is set to the docker0 interface IP, 
+# as we need to access the postgres service from inside the test docker image.
 test-integration:
   <<: *docker
   stage: test-integration
@@ -54,7 +55,7 @@ test-integration:
     - > 
         docker run 
         -e "BACKUP_DIRECTORY=/tmp/"
-        -e "MYSQL_HOST=127.0.0.1"
+        -e "MYSQL_HOST=172.17.0.1"
         -e "MYSQL_PASSWORD=test"
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
