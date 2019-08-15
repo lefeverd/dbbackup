@@ -32,4 +32,6 @@ def get_cli():
     root_group = RootGroup()
     mysql_commands = DatabaseCommand("mysql")
     root_group.add_command(mysql_commands)
+    postgres_commands = DatabaseCommand("postgres")
+    root_group.add_command(postgres_commands)
     return root_group

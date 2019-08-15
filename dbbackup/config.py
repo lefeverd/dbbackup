@@ -22,6 +22,7 @@ DAYS_TO_KEEP = os.environ.get("DAYS_TO_KEEP", 7)
 BACKUP_SUFFIX = os.environ.get("BACKUP_SUFFIX", False)
 PROVIDER = os.environ.get("PROVIDER", False)
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+EXCLUDE_DATABASES = os.environ.get("EXCLUDE_DATABASES", False)
 
 # Prometheus Pushgateway - metrics
 PROMETHEUS_PUSHGATEWAY_URL = os.environ.get("PROMETHEUS_PUSHGATEWAY_URL",
