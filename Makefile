@@ -7,7 +7,10 @@ init:
 	./venv/bin/pip install -r requirements.txt
 
 test:
-	ENV_FILE=.env.test ./venv/bin/pytest --cov=dbbackup --cov-report html tests/
+	ENV_FILE=.env.test.mysql ./venv/bin/pytest --cov=dbbackup --cov-report html tests/
 
-testint:
-	ENV_FILE=.env.test ./venv/bin/pytest tests_integration/
+test-integration-mysql:
+	ENV_FILE=.env.test.mysql ./venv/bin/pytest tests_integration/test_mysql.py
+
+test-integration-postgres:
+	ENV_FILE=.env.test.postgres ./venv/bin/pytest tests_integration/test_postgres.py

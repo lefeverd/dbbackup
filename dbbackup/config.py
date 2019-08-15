@@ -29,9 +29,12 @@ PROMETHEUS_PUSHGATEWAY_URL = os.environ.get("PROMETHEUS_PUSHGATEWAY_URL",
 
 # Provider - Postgres
 PGHOST = os.environ.get("PGHOST", False)
+PGPORT = os.environ.get("PGPORT", False)
 PGUSER = os.environ.get("PGUSER", False)
 PGPASSWORD = os.environ.get("PGPASSWORD", False)
 PG_BACKUP_TYPE = os.environ.get("PG_BACKUP_TYPE", False)
+PGPASSFILE = os.environ.get("PGPASSFILE", False)
+PG_BIN_DIRECTORY = os.environ.get("PG_BIN_DIRECTORY", "/usr/local/bin")
 
 # Provider - MySQL
 MYSQL_HOST = os.environ.get("MYSQL_HOST", False)

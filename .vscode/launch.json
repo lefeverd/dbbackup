@@ -17,7 +17,11 @@
             "request": "launch",
             "module": "dbbackup",
             "console": "integratedTerminal",
-            "envFile": "${workspaceFolder}/.env",
+            "envFile": "${workspaceFolder}/.fake",
+            "env": {
+                "ENV_FILE": ".fake",
+                "BACKUP_DIRECTORY": "/tmp/",
+            },
             "args": [
                 "mysql",
                 "backup"
@@ -55,7 +59,7 @@
               "WaitOnNormalExit",
               "RedirectOutput"
             ],
-            "debugStdLib": true,
+            "justMyCode": false,
           },
           {
             "name": "PyTest integration",
@@ -66,18 +70,44 @@
             "module": "pytest",
             "args": [
                 "-sv", 
-                "tests_integration/", 
-                //"-k", "test_backup_correctly_done"
+                "tests_integration/test_mysql.py", 
+                "-k", "test_backup_correctly_done"
             ],
             "cwd": "${workspaceRoot}",
-            "env": {},
+            "env": {
+                "ENV_FILE": ".env.test.mysql"
+            },
             "envFile": "${workspaceRoot}/.fake.env",
             "debugOptions": [
               "WaitOnAbnormalExit",
               "WaitOnNormalExit",
               "RedirectOutput"
             ],
-            "debugStdLib": true,
+            "justMyCode": false,
+          },
+          {
+            "name": "PyTest integration postgres",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/test_postgres.py"
+                //"-k", "test_backup_restore"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "ENV_FILE": ".env.test.postgres"
+            },
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
           },
     ]
 }
