@@ -47,7 +47,7 @@ test:
 # see https://gitlab.com/gitlab-org/gitlab-runner/issues/2677#note_67671527
 # The twist here is that we run dind, so it is set to the docker0 interface IP, 
 # as we need to access the postgres service from inside the test docker image.
-test-integration:
+test-integration-mysql:
   <<: *docker
   stage: test-integration
   script:
@@ -60,7 +60,22 @@ test-integration:
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
         --entrypoint pytest
-        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_mysql.py
+
+test-integration-postgres:
+  <<: *docker
+  stage: test-integration
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "BACKUP_DIRECTORY=/tmp/"
+        -e "PGHOST=172.17.0.1"
+        -e "PGPASSWORD=test"
+        -e "LOG_LEVEL=DEBUG"
+        -e "BACKUP_SUFFIX=-daily"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_postgres.py
 
 release:
   <<: *docker
