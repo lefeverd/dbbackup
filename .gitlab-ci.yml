@@ -11,7 +11,7 @@ stages:
   - release
 
 variables:
-  DOCKER_IMAGE: registry.horsducommun.be/dbbackup
+  DOCKER_IMAGE: harbor.horsducommun.be/dbbackup/dbbackup
   DOCKER_IMAGE_TAG: $CI_COMMIT_SHA
   MYSQL_ROOT_PASSWORD: "test"
   MYSQL_DATABASE: test
@@ -19,7 +19,7 @@ variables:
 .docker: &docker
   before_script:
     - export DOCKER_HOST="tcp://localhost:2375"
-    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD registry.horsducommun.be
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD harbor.horsducommun.be
 
 # We use --network host in the docker build, see https://github.com/gliderlabs/docker-alpine/issues/307
 build:
@@ -91,3 +91,11 @@ release:
     - docker push "${DOCKER_IMAGE}:${RELEASE_DATE}-${DOCKER_IMAGE_TAG}"
   only:
     - master
+
+cleanup:
+  image: alpine
+  stage: cleanup
+  script:
+    - apk add curl
+    - curl -XDELETE https://harbor.horsducommun.be/api/repositories/dbbackup/tags/$DOCKER_IMAGE_TAG
+  allow_failure: true
