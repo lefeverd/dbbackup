@@ -2,6 +2,7 @@ image: docker:latest
 services:
 - docker:dind
 - mysql:5.7
+- postgres:11.5
 
 stages:
   - build
