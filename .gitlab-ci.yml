@@ -72,6 +72,7 @@ test-integration-postgres:
         docker run 
         -e "BACKUP_DIRECTORY=/tmp/"
         -e "PGHOST=172.17.0.1"
+        -e "PGUSER=postgres"
         -e "PGPASSWORD=test"
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
