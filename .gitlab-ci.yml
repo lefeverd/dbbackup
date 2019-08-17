@@ -93,10 +93,11 @@ release:
   only:
     - master
 
+# We use harbor as the docker registry, mark the test image to be deleted (gc is running periodically).
 cleanup:
   image: alpine
   stage: cleanup
   script:
     - apk add curl
-    - curl -XDELETE https://harbor.horsducommun.be/api/repositories/dbbackup/tags/$DOCKER_IMAGE_TAG
+    - curl -XDELETE "https://harbor.horsducommun.be/api/repositories/dbbackup/tags/${DOCKER_IMAGE_TAG}"
   allow_failure: true
