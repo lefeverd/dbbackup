@@ -100,5 +100,5 @@ cleanup:
   script:
     - apk add curl
     # repository is dbbackup/dbbackup, urlencoded
-    - curl -XDELETE "https://harbor.horsducommun.be/api/repositories/dbbackup%2Fdbbackup/tags/${DOCKER_IMAGE_TAG}"
+    - curl -u $DOCKER_USERNAME:$DOCKER_PASSWORD -XDELETE "https://harbor.horsducommun.be/api/repositories/dbbackup%2Fdbbackup/tags/${DOCKER_IMAGE_TAG}"
   allow_failure: true
