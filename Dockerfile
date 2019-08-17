@@ -16,5 +16,6 @@ COPY ./requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 ENV MYSQL_BIN_DIRECTORY=/usr/bin/
+ENV PG_BIN_DIRECTORY=/usr/bin/
 
 ENTRYPOINT ["python", "-m", "dbbackup"]
