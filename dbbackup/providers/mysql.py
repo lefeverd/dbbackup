@@ -18,6 +18,7 @@ DEFAULT_MYSQL_HOST = "127.0.0.1"
 DEFAULT_MYSQL_USER = "root"
 DEFAULT_MYSQL_BIN_DIRECTORY = "/usr/local/bin/"
 DEFAULT_COMPRESS = False
+MYSQL_SYSTEM_DATABASES = ["performance_schema", "information_schema"]
 
 
 class MySQL(AbstractProvider):
@@ -46,6 +47,18 @@ class MySQL(AbstractProvider):
             if database not in databases:
                 raise Exception(f"Database {database} doesn't exist.")
             databases = [database]
+
+        if not exclude:
+            exclude = []
+
+        if not isinstance(exclude, (list, tuple)):
+            exclude = tuple([exclude])
+
+        # By default, exclude system databases (some are transient/memory, and could
+        # result in access right issues)
+        # Only exclude them if not expliticly trying to backup them.
+        if database not in MYSQL_SYSTEM_DATABASES:
+            exclude += tuple(MYSQL_SYSTEM_DATABASES)
 
         # Filter out excluded databases
         if exclude:
@@ -84,13 +97,11 @@ class MySQL(AbstractProvider):
                                  self.compress) as temp_file:
             backup_cmd = self._get_backup_command(database)
             try:
-                completed_process = subprocess.run(
-                    backup_cmd, stdout=temp_file)
-                _logger.debug(
-                    f"Command output: {completed_process.returncode}")
+                subprocess.run(backup_cmd, check=True, stdout=temp_file)
             except subprocess.CalledProcessError as e:
                 raise Exception(
-                    f"Could not backup database {database}: {e.stderr}")
+                    f"Could not backup database {database}: retcode {e.returncode} - stderr {e.stderr}."
+                )
 
         _logger.info("Done")
 
@@ -162,7 +173,9 @@ class MySQL(AbstractProvider):
             _logger.debug(
                 f"Restore process retcode {completed_proc.returncode}")
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Could not restore: {e}")
+            raise Exception(
+                f"Could not restore database {database}: {e.output}, {e.stderr}"
+            )
 
         if tmpdir:
             try:

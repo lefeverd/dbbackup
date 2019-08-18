@@ -52,6 +52,31 @@ class TestPostgres:
 
     @mock.patch(
         'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_specific_unexisting_database(self, mock_datetime,
+                                                 postgres_provider):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                with raises(Exception) as e:
+                    postgres_provider.execute_backup(database="testfake")
+                assert "Database testfake doesn't exist" in str(e.value)
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_specific_unexisting_database_backup_database(
+            self, mock_datetime, postgres_provider):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                with raises(Exception) as e:
+                    postgres_provider.backup_database(database="testfake")
+                assert "Could not backup database testfake: retcode 1 - stderr None." in str(
+                    e.value)
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
     def test_backup_exclude_database_correctly_done(self, mock_datetime,
                                                     postgres_provider):
         mock_datetime.return_value = "20190101_000000"

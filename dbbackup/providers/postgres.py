@@ -94,8 +94,12 @@ class Postgres(AbstractProvider):
         with TemporaryBackupFile(filename,
                                  config.BACKUP_DIRECTORY) as temp_file:
             backup_cmd = self._get_backup_command(database)
-            output = subprocess.check_call(backup_cmd, stdout=temp_file)
-            _logger.debug(f"Command output: {output}")
+            try:
+                subprocess.run(backup_cmd, check=True, stdout=temp_file)
+            except subprocess.CalledProcessError as e:
+                raise Exception(
+                    f"Could not backup database {database}: retcode {e.returncode} - stderr {e.stderr}."
+                )
         _logger.info("Done")
 
     def _get_backup_command(self, database):
@@ -190,11 +194,14 @@ class Postgres(AbstractProvider):
         command.append(backup_file)
 
         try:
-            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
-            _logger.debug(f"Restore process output {output}")
+            completed_proc = subprocess.run(
+                command, check=True, capture_output=True)
+            _logger.debug(
+                f"Restore process retcode {completed_proc.returncode}")
         except subprocess.CalledProcessError as e:
             raise Exception(
-                f"Could not restore database {database}: {e.output}")
+                f"Could not restore database {database}: {e.output}, {e.stderr}"
+            )
 
         if tmpdir:
             try:

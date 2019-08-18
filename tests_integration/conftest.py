@@ -34,6 +34,8 @@ def test_database(mysql_provider, create_database, seed_database,
         raise Exception("No MYSQL_BIN_DIRECTORY defined.")
     if not config.MYSQL_HOST:
         raise Exception("No MYSQL_HOST defined.")
+    drop_database("test")
+    drop_database("another")
     create_database("test")
     seed_database("test")
     yield
@@ -46,7 +48,12 @@ def create_database(mysql_provider):
     def _create(database):
         command = mysql_provider._get_command()
         command += ['-e', f"create database if not exists {database};"]
-        subprocess.check_call(command)
+        try:
+            completed_process = subprocess.run(
+                command, check=True, capture_output=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"Could not create database {database}: {e.stderr}")
 
     return _create
 
@@ -59,7 +66,11 @@ def seed_database(mysql_provider):
             '-D', database, '-e',
             "create table users (id numeric, name varchar(20)); insert into users (id, name) VALUES (1, 'supertestuser');"
         ]
-        subprocess.check_call(command)
+        try:
+            completed_process = subprocess.run(
+                command, check=True, capture_output=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Could not seed database {database}: {e.stderr}")
 
     return _seed
 

@@ -62,7 +62,7 @@
             "justMyCode": false,
           },
           {
-            "name": "PyTest integration",
+            "name": "PyTest integration mysql",
             "type": "python",
             "request": "launch",
             "stopOnEntry": false,
@@ -70,8 +70,8 @@
             "module": "pytest",
             "args": [
                 "-sv", 
-                "tests_integration/test_mysql.py", 
-                "-k", "test_backup_correctly_done"
+                "tests_integration/test_mysql.py"
+                //"-k", "test_backup_specific_unexisting_database_backup_database"
             ],
             "cwd": "${workspaceRoot}",
             "env": {
