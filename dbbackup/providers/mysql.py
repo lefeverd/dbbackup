@@ -17,7 +17,6 @@ _logger = logging.getLogger(__name__)
 DEFAULT_MYSQL_HOST = "127.0.0.1"
 DEFAULT_MYSQL_USER = "root"
 DEFAULT_MYSQL_BIN_DIRECTORY = "/usr/local/bin/"
-DEFAULT_EXCLUDE_DATABASES = ["information_schema", "performance_schema"]
 DEFAULT_COMPRESS = False
 
 
@@ -27,13 +26,11 @@ class MySQL(AbstractProvider):
                  user=DEFAULT_MYSQL_USER,
                  password=None,
                  mysql_bin_directory=DEFAULT_MYSQL_BIN_DIRECTORY,
-                 exclude_databases=DEFAULT_EXCLUDE_DATABASES,
                  compress=DEFAULT_COMPRESS):
         self.host = host
         self.user = user
         self.password = password
         self.mysql_bin_directory = mysql_bin_directory
-        self.exclude_databases = exclude_databases
         self.compress = compress
 
     def _get_default_command_args(self):
@@ -42,13 +39,19 @@ class MySQL(AbstractProvider):
             args.append(f"-p{self.password}")
         return args
 
-    def execute_backup(self):
+    def execute_backup(self, database=None, exclude=None):
         databases = self.get_databases()
-        databases = [
-            database for database in databases
-            if database not in self.exclude_databases
-        ]
-        _logger.debug(f"Found databases: {databases}")
+
+        if database:
+            if database not in databases:
+                raise Exception(f"Database {database} doesn't exist.")
+            databases = [database]
+
+        # Filter out excluded databases
+        if exclude:
+            databases = [db for db in databases if db not in exclude]
+
+        _logger.debug(f"Starting backup of databases: {databases}")
         for database in databases:
             self.backup_database(database)
 
@@ -80,8 +83,15 @@ class MySQL(AbstractProvider):
         with TemporaryBackupFile(filename, config.BACKUP_DIRECTORY,
                                  self.compress) as temp_file:
             backup_cmd = self._get_backup_command(database)
-            output = subprocess.check_call(backup_cmd, stdout=temp_file)
-            _logger.debug(f"Command output: {output}")
+            try:
+                completed_process = subprocess.run(
+                    backup_cmd, stdout=temp_file)
+                _logger.debug(
+                    f"Command output: {completed_process.returncode}")
+            except subprocess.CalledProcessError as e:
+                raise Exception(
+                    f"Could not backup database {database}: {e.stderr}")
+
         _logger.info("Done")
 
     def _get_backup_command(self, database):
@@ -124,32 +134,17 @@ class MySQL(AbstractProvider):
         return backup_files
 
     def is_backup(self, a_file):
-
-        return (
-            re.search(r"^\d{8}_\d{6}.*", a_file)
-            and (a_file.endswith(".sql") or a_file.endswith(".gz")) and
-            (config.BACKUP_SUFFIX in a_file if config.BACKUP_SUFFIX else True))
+        file_name = Path(a_file).name
+        return (re.search(r"^\d{8}_\d{6}.*", file_name)
+                and (file_name.endswith(".sql") or file_name.endswith(".gz"))
+                and (config.BACKUP_SUFFIX in file_name
+                     if config.BACKUP_SUFFIX else True))
 
     def restore_backup(self, backup_file, database, recreate=None,
                        create=None):
-        backup_file_path = Path(backup_file)
-        if not backup_file_path.is_absolute():
-            backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
-            backup_file_path = backup_file_path.resolve()
-
-        if not backup_file_path.exists():
-            raise Exception(f"File {backup_file_path} does not exist.")
-
-        try:
-            backup_file_path.relative_to(config.BACKUP_DIRECTORY)
-        except ValueError:
-            raise Exception(
-                f"File {backup_file} is not inside BACKUP_DIRECTORY \
-                    {config.BACKUP_DIRECTORY}")
-
-        backup_file = str(backup_file_path)
+        backup_file = self.verify_backup_file(backup_file)
         tmpdir = None
-        if not self.is_backup(backup_file_path.name):
+        if not self.is_backup(backup_file):
             raise Exception(f"File {backup_file} is not a valid backup.")
 
         if backup_file.endswith(".gz"):
@@ -161,9 +156,13 @@ class MySQL(AbstractProvider):
         command = self._get_restore_command()
         backup_file_fd = open(backup_file)
 
-        proc = subprocess.run(
-            command, stdin=backup_file_fd, stdout=subprocess.PIPE)
-        _logger.debug(f"Restore process retcode {proc.returncode}")
+        try:
+            completed_proc = subprocess.run(
+                command, stdin=backup_file_fd, check=True, capture_output=True)
+            _logger.debug(
+                f"Restore process retcode {completed_proc.returncode}")
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Could not restore: {e}")
 
         if tmpdir:
             try:

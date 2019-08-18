@@ -34,29 +34,57 @@ class TestMysql:
                             temp_dir):
                 mysql_provider.execute_backup()
                 backups = os.listdir(temp_dir)
-                assert len(backups) == 3
+                assert len(backups) == 5
+                assert "20190101_000000-test-daily.sql" in backups
                 assert "20190101_000000-sys-daily.sql" in backups
                 assert "20190101_000000-mysql-daily.sql" in backups
+                assert "20190101_000000-performance_schema-daily.sql" in backups
+                assert "20190101_000000-information_schema-daily.sql" in backups
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_specific_database_correctly_done(self, mock_datetime,
+                                                     mysql_provider):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                mysql_provider.execute_backup(database="test")
+                backups = os.listdir(temp_dir)
+                assert len(backups) == 1
                 assert "20190101_000000-test-daily.sql" in backups
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
-    def test_backup_multiple_databases_correctly_done(
-            self, mock_datetime, mysql_provider, create_database,
-            seed_database):
+    def test_backup_exclude_database_correctly_done(self, mock_datetime,
+                                                    mysql_provider):
         mock_datetime.return_value = "20190101_000000"
-        create_database("another")
-        seed_database("another")
         with tempfile.TemporaryDirectory() as temp_dir:
             with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
                             temp_dir):
-                mysql_provider.execute_backup()
+                mysql_provider.execute_backup(exclude="sys")
                 backups = os.listdir(temp_dir)
                 assert len(backups) == 4
-                assert "20190101_000000-sys-daily.sql" in backups
                 assert "20190101_000000-mysql-daily.sql" in backups
                 assert "20190101_000000-test-daily.sql" in backups
-                assert "20190101_000000-another-daily.sql" in backups
+                assert "20190101_000000-performance_schema-daily.sql" in backups
+                assert "20190101_000000-information_schema-daily.sql" in backups
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_exclude_multiple_database_correctly_done(
+            self, mock_datetime, mysql_provider):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                mysql_provider.execute_backup(
+                    exclude=["sys", "performance_schema"])
+                backups = os.listdir(temp_dir)
+                assert len(backups) == 3
+                assert "20190101_000000-mysql-daily.sql" in backups
+                assert "20190101_000000-test-daily.sql" in backups
+                assert "20190101_000000-information_schema-daily.sql" in backups
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
@@ -73,10 +101,12 @@ class TestMysql:
                             temp_dir):
                 mysql.execute_backup()
                 backups = os.listdir(temp_dir)
-                assert len(backups) == 3
+                assert len(backups) == 5
                 assert "20190101_000000-sys-daily.sql.gz" in backups
                 assert "20190101_000000-mysql-daily.sql.gz" in backups
                 assert "20190101_000000-test-daily.sql.gz" in backups
+                assert "20190101_000000-performance_schema-daily.sql.gz" in backups
+                assert "20190101_000000-information_schema-daily.sql.gz" in backups
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
@@ -87,10 +117,12 @@ class TestMysql:
                             temp_dir):
                 mysql_provider.execute_backup()
                 backups = mysql_provider.get_backups()
-                assert len(backups) == 3
+                assert len(backups) == 5
                 assert "20190101_000000-sys-daily.sql" in backups
                 assert "20190101_000000-mysql-daily.sql" in backups
                 assert "20190101_000000-test-daily.sql" in backups
+                assert "20190101_000000-performance_schema-daily.sql" in backups
+                assert "20190101_000000-information_schema-daily.sql" in backups
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
@@ -107,10 +139,12 @@ class TestMysql:
                             temp_dir):
                 mysql.execute_backup()
                 backups = mysql.get_backups()
-                assert len(backups) == 3
+                assert len(backups) == 5
                 assert "20190101_000000-sys-daily.sql.gz" in backups
                 assert "20190101_000000-mysql-daily.sql.gz" in backups
                 assert "20190101_000000-test-daily.sql.gz" in backups
+                assert "20190101_000000-performance_schema-daily.sql.gz" in backups
+                assert "20190101_000000-information_schema-daily.sql.gz" in backups
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
@@ -125,7 +159,7 @@ class TestMysql:
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 0
                 backup_file = Path(temp_dir) / "20190101_000000-test-daily.sql"
-                mysql_provider.restore_backup(backup_file.resolve())
+                mysql_provider.restore_backup(backup_file.resolve(), "test")
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -145,7 +179,7 @@ class TestMysql:
                         tempdir) / "20190101_000000-test-daily.sql"
                     open(backup_file, 'a').close()
                     with raises(Exception) as e:
-                        mysql_provider.restore_backup(backup_file)
+                        mysql_provider.restore_backup(backup_file, "test")
                     assert 'is not inside BACKUP_DIRECTORY' in str(e.value)
 
     @mock.patch(
@@ -161,7 +195,7 @@ class TestMysql:
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.sql"
-                mysql_provider.restore_backup(backup_file)
+                mysql_provider.restore_backup(backup_file, "test")
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -178,7 +212,7 @@ class TestMysql:
                 mysql_provider.execute_backup()
                 backup_file = "20190101_000000-test-daily-fake.sql"
                 with raises(Exception) as e:
-                    mysql_provider.restore_backup(backup_file)
+                    mysql_provider.restore_backup(backup_file, "test")
                 assert "does not exist" in str(e.value)
 
     @mock.patch(
@@ -200,7 +234,7 @@ class TestMysql:
                 users = get_users(mysql, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.sql.gz"
-                mysql.restore_backup(backup_file)
+                mysql.restore_backup(backup_file, "test")
                 users = get_users(mysql, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"

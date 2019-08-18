@@ -46,14 +46,14 @@ class TestMysqlProvider(unittest.TestCase):
         ])
 
     @mock.patch('dbbackup.providers.mysql.TemporaryBackupFile.close')
-    @mock.patch('dbbackup.providers.mysql.subprocess.check_call')
+    @mock.patch('dbbackup.providers.mysql.subprocess.run')
     @mock.patch('dbbackup.providers.mysql.MySQL._get_backup_command')
-    def test_backup_database(self, _get_backup_command, mock_check_call,
-                             mock_close):
+    def test_temporary_file_wrapper(self, _get_backup_command, mock_run,
+                                    mock_close):
         _get_backup_command.return_value = "cmd"
         mock_close.return_value = True
         provider = mysql.MySQL()
         provider.backup_database('test_database')
-        assert mock_check_call.call_args[0][0] == 'cmd'
-        assert isinstance(mock_check_call.call_args[1]['stdout'],
+        assert mock_run.call_args[0][0] == 'cmd'
+        assert isinstance(mock_run.call_args[1]['stdout'],
                           _TemporaryFileWrapper)

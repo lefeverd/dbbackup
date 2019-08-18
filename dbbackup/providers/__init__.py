@@ -1,7 +1,10 @@
 import abc
 from importlib import import_module
 import inspect
+from pathlib import Path
 import logging
+
+from dbbackup import config
 
 _logger = logging.getLogger(__name__)
 
@@ -12,12 +15,30 @@ class ProviderClassNotFoundError(Exception):
 
 class AbstractProvider(abc.ABC):
     @abc.abstractclassmethod
-    def execute_backup(self):
+    def execute_backup(self, database=None, exclude=None):
         pass
 
     @abc.abstractclassmethod
     def list_backups(self):
         pass
+
+    def verify_backup_file(self, backup_file):
+        backup_file_path = Path(backup_file)
+        if not backup_file_path.is_absolute():
+            backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
+            backup_file_path = backup_file_path.resolve()
+
+        if not backup_file_path.exists():
+            raise Exception(f"File {backup_file_path} does not exist.")
+
+        try:
+            backup_file_path.relative_to(config.BACKUP_DIRECTORY)
+        except ValueError:
+            raise Exception(
+                f"File {backup_file} is not inside BACKUP_DIRECTORY \
+                    {config.BACKUP_DIRECTORY}")
+
+        return str(backup_file_path)
 
 
 def get_builder_module(module_name):

@@ -39,21 +39,42 @@ class TestPostgres:
 
     @mock.patch(
         'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
-    def test_backup_multiple_databases_correctly_done(
-            self, mock_datetime, postgres_provider, create_postgres_database,
-            seed_postgres_database):
+    def test_backup_specific_database_correctly_done(self, mock_datetime,
+                                                     postgres_provider):
         mock_datetime.return_value = "20190101_000000"
-        create_postgres_database("another")
-        seed_postgres_database("another")
         with tempfile.TemporaryDirectory() as temp_dir:
-            with mock.patch(
-                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
-                    temp_dir):
-                postgres_provider.execute_backup()
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                postgres_provider.execute_backup(database="test")
                 backups = os.listdir(temp_dir)
-                assert len(backups) == 3
-                assert "20190101_000000-postgres-daily.dump" in backups
+                assert len(backups) == 1
                 assert "20190101_000000-test-daily.dump" in backups
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_exclude_database_correctly_done(self, mock_datetime,
+                                                    postgres_provider):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                postgres_provider.execute_backup(exclude="postgres")
+                backups = os.listdir(temp_dir)
+                assert len(backups) == 1
+                assert "20190101_000000-test-daily.dump" in backups
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_exclude_multiple_database_correctly_done(
+            self, mock_datetime, postgres_provider, create_postgres_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                create_postgres_database("another")
+                postgres_provider.execute_backup(exclude=["test", "postgres"])
+                backups = os.listdir(temp_dir)
+                assert len(backups) == 1
                 assert "20190101_000000-another-daily.dump" in backups
 
     @mock.patch(
@@ -271,20 +292,3 @@ class TestPostgres:
                 with raises(Exception) as e:
                     postgres_provider.restore_backup(backup_file, "testnew")
                 assert "does not exist" in str(e.value)
-
-    @mock.patch(
-        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
-    def test_backup_exclude_database(self, mock_datetime,
-                                     drop_postgres_database):
-        postgres = Postgres(
-            psql_bin_directory=config.PG_BIN_DIRECTORY,
-            exclude_databases=["postgres"])
-        mock_datetime.return_value = "20190101_000000"
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with mock.patch(
-                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
-                    str(Path(temp_dir).resolve())):
-                postgres.execute_backup()
-                backups = postgres.get_backups()
-                assert len(backups) == 1
-                assert "20190101_000000-test-daily.dump" in backups

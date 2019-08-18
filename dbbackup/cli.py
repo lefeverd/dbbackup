@@ -18,7 +18,15 @@ class DatabaseCommand(click.MultiCommand):
 
     def cmd_backup(self):
         return click.Command(
-            "backup", callback=getattr(self.provider, "execute_backup"))
+            "backup", callback=getattr(self.provider, "execute_backup"),
+            params=[
+                click.Argument(["database"], required=False),
+                click.Option(
+                    ["-e", "--exclude"],
+                    multiple=True,
+                    help="Exclude database. You can use this option multiple times \
+                    to exclude multiple databases.")],
+            help="Backup the specified database, or all if none is specified.")
 
     def cmd_list(self):
         return click.Command(

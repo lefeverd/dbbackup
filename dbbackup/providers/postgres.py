@@ -47,13 +47,19 @@ class Postgres(AbstractProvider):
     def _get_default_command_args(self):
         return []
 
-    def execute_backup(self):
+    def execute_backup(self, database=None, exclude=None):
         databases = self.get_databases()
-        databases = [
-            database for database in databases
-            if database not in self.exclude_databases
-        ]
-        _logger.debug(f"Found databases: {databases}")
+
+        if database:
+            if database not in databases:
+                raise Exception(f"Database {database} doesn't exist.")
+            databases = [database]
+
+        # Filter out excluded databases
+        if exclude:
+            databases = [db for db in databases if db not in exclude]
+
+        _logger.debug(f"Starting backup of databases: {databases}")
         for database in databases:
             self.backup_database(database)
 
@@ -145,32 +151,19 @@ class Postgres(AbstractProvider):
         return backup_files
 
     def is_backup(self, a_file):
-        return (
-            re.search(r"^\d{8}_\d{6}.*", a_file)
-            and (a_file.endswith(".sql") or a_file.endswith(".tar")
-                 or a_file.endswith(".dump")) and
-            (config.BACKUP_SUFFIX in a_file if config.BACKUP_SUFFIX else True))
+        file_name = Path(a_file).name
+        return (re.search(r"^\d{8}_\d{6}.*", file_name)
+                and (file_name.endswith(".sql") or file_name.endswith(".tar")
+                     or file_name.endswith(".dump"))
+                and (config.BACKUP_SUFFIX in file_name
+                     if config.BACKUP_SUFFIX else True))
 
     def restore_backup(self, backup_file, database, recreate=None,
                        create=None):
-        backup_file_path = Path(backup_file)
-        if not backup_file_path.is_absolute():
-            backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
-            backup_file_path = backup_file_path.resolve()
+        backup_file = self.verify_backup_file(backup_file)
 
-        if not backup_file_path.exists():
-            raise Exception(f"File {backup_file_path} does not exist.")
-
-        try:
-            backup_file_path.relative_to(config.BACKUP_DIRECTORY)
-        except ValueError:
-            raise Exception(
-                f"File {backup_file} is not inside BACKUP_DIRECTORY \
-                    {config.BACKUP_DIRECTORY}")
-
-        backup_file = str(backup_file_path)
         tmpdir = None
-        if not self.is_backup(backup_file_path.name):
+        if not self.is_backup(backup_file):
             raise Exception(f"File {backup_file} is not a valid backup.")
 
         if backup_file.endswith(".gz"):
