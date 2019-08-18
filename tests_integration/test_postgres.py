@@ -117,7 +117,8 @@ class TestPostgres:
                 assert len(users) == 0
                 backup_file = Path(
                     temp_dir) / "20190101_000000-test-daily.dump"
-                postgres_provider.restore_backup(backup_file.resolve())
+                postgres_provider.restore_backup(
+                    backup_file.resolve(), "test", create=True)
                 users = get_users(postgres_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -138,7 +139,7 @@ class TestPostgres:
                         tempdir) / "20190101_000000-test-daily.dump"
                     open(backup_file, 'a').close()
                     with raises(Exception) as e:
-                        postgres_provider.restore_backup(backup_file)
+                        postgres_provider.restore_backup(backup_file, "test")
                     assert 'is not inside BACKUP_DIRECTORY' in str(e.value)
 
     @mock.patch(
@@ -155,7 +156,8 @@ class TestPostgres:
                 users = get_users(postgres_provider, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.dump"
-                postgres_provider.restore_backup(backup_file)
+                postgres_provider.restore_backup(
+                    backup_file, "test", create=True)
                 users = get_users(postgres_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -173,7 +175,7 @@ class TestPostgres:
                 postgres_provider.execute_backup()
                 backup_file = "20190101_000000-test-daily-fake.dump"
                 with raises(Exception) as e:
-                    postgres_provider.restore_backup(backup_file)
+                    postgres_provider.restore_backup(backup_file, "test")
                 assert "does not exist" in str(e.value)
 
     @mock.patch(
@@ -192,11 +194,83 @@ class TestPostgres:
                 users = get_users(postgres, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.tar"
-                postgres.restore_backup(backup_file)
+                postgres.restore_backup(backup_file, "test", create=True)
                 users = get_users(postgres, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
                 assert users[0][1] == "supertestuser"
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_restore_other_database(
+            self, mock_datetime, postgres_provider, drop_postgres_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch(
+                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
+                    str(Path(temp_dir).resolve())):
+                drop_postgres_database("testnew")
+                postgres_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.dump"
+                postgres_provider.restore_backup(
+                    backup_file, "testnew", create=True)
+                users = get_users(postgres_provider, "test")
+                assert len(users) == 1
+                assert users[0][0] == "1"
+                assert users[0][1] == "supertestuser"
+                users = get_users(postgres_provider, "testnew")
+                assert len(users) == 1
+                assert users[0][0] == "1"
+                assert users[0][1] == "supertestuser"
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_restore_database_already_exists(
+            self, mock_datetime, postgres_provider, drop_postgres_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch(
+                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
+                    str(Path(temp_dir).resolve())):
+                postgres_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.dump"
+                with raises(Exception) as e:
+                    postgres_provider.restore_backup(backup_file, "test")
+                assert "Could not restore database" in str(e.value)
+                assert "already exists" in str(e.value)
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_restore_create_database_already_exists(
+            self, mock_datetime, postgres_provider, drop_postgres_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch(
+                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
+                    str(Path(temp_dir).resolve())):
+                postgres_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.dump"
+                with raises(Exception) as e:
+                    postgres_provider.restore_backup(
+                        backup_file, "test", create=True)
+                assert "Could not create database" in str(e.value)
+                assert "already exists" in str(e.value)
+
+    @mock.patch(
+        'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
+    def test_backup_restore_other_database_unexisting(
+            self, mock_datetime, postgres_provider, drop_postgres_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch(
+                    'dbbackup.providers.postgres.config.BACKUP_DIRECTORY',
+                    str(Path(temp_dir).resolve())):
+                drop_postgres_database("testnew")
+                postgres_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.dump"
+                with raises(Exception) as e:
+                    postgres_provider.restore_backup(backup_file, "testnew")
+                assert "does not exist" in str(e.value)
 
     @mock.patch(
         'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')

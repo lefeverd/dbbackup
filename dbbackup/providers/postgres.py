@@ -151,7 +151,8 @@ class Postgres(AbstractProvider):
                  or a_file.endswith(".dump")) and
             (config.BACKUP_SUFFIX in a_file if config.BACKUP_SUFFIX else True))
 
-    def restore_backup(self, backup_file, force=None):
+    def restore_backup(self, backup_file, database, recreate=None,
+                       create=None):
         backup_file_path = Path(backup_file)
         if not backup_file_path.is_absolute():
             backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
@@ -178,17 +179,51 @@ class Postgres(AbstractProvider):
                 tf.extractall(path=tmpdir)
             backup_file = Path(tmpdir) / Path(backup_file).name[:-3]
 
+        if recreate:
+            try:
+                self._drop_database(database)
+            except Exception:
+                _logger.warn(f"Database {database} could not be dropped.")
+
+        if recreate or create:
+            try:
+                self._create_database(database)
+            except subprocess.CalledProcessError as e:
+                raise Exception(
+                    f"Could not create database {database}: {e.output}")
+
         command = self._get_restore_command()
+        command += ["-d", database]
         command.append(backup_file)
 
-        output = subprocess.check_output(command)
-        _logger.debug(f"Restore process output {output}")
+        try:
+            output = subprocess.check_output(command, stderr=subprocess.STDOUT)
+            _logger.debug(f"Restore process output {output}")
+        except subprocess.CalledProcessError as e:
+            raise Exception(
+                f"Could not restore database {database}: {e.output}")
 
         if tmpdir:
             try:
                 shutil.rmtree(tmpdir)
             except Exception:
                 _logger.warn(f"Could not delete temporary directory {tmpdir}")
+
+    def _drop_database(self, database):
+        command = self._get_command()
+        drop_command = command + ['-c', f'drop database {database}']
+        _logger.info(f"Dropping database {database}")
+        output = subprocess.check_output(
+            drop_command, stderr=subprocess.STDOUT)
+        _logger.debug(f"drop process output {output}")
+
+    def _create_database(self, database):
+        command = self._get_command()
+        create_command = command + ['-c', f'create database {database}']
+        _logger.info(f"Creating database {database}")
+        output = subprocess.check_output(
+            create_command, stderr=subprocess.STDOUT)
+        _logger.debug(f"create process output {output}")
 
     def _get_restore_command(self):
         pg_restore_bin_path = Path(self.psql_bin_directory + '/pg_restore')
@@ -199,9 +234,6 @@ class Postgres(AbstractProvider):
         restore_cmd = [pg_restore_bin]
         restore_cmd += self._get_default_command_args()
         restore_cmd.append("--exit-on-error")
-        # Need to connect to an existing db, otherwise it will simply output to STDOUT
-        restore_cmd += ["--dbname", "postgres"]
-        restore_cmd.append("--create")
         _logger.debug(f"command: {restore_cmd}")
         _logger.debug(f"command (str): {(' ').join(restore_cmd)}")
         return restore_cmd

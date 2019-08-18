@@ -7,7 +7,7 @@ It supports the following database engines:
 - MySQL
 
 It is meant to be used in a cron, which can launch a container based on this image to backup
-databases on regular intervals.  
+databases at regular intervals.  
 You can create multiple crons based on your retention policy, for instance a daily, monthly and yearly cron,
 each of which will use different values for `DAYS_TO_KEEP` and `BACKUP_SUFFIX`.
 
@@ -31,28 +31,28 @@ To edit the crontab, use `crontab -e`.
             - [Restore](#restore-1)
 - [Metrics](#metrics)
 - [Tests](#tests)
-- [Notes](#notes)
 
 <!-- /TOC -->
 
 # Getting started
 
-By default, the command executed when the container starts is `pg_backup`,
-which will backup postgres databases.
+To get the help output from the CLI, simply run:
+
+```bash
+docker run lefeverd/docker-db-backup:0.1.0
+```
 
 ## Common configuration
 
 The following environment variables can be used:
 
+- BACKUP_DIR: defines the directory in which the backups will be stored.
+**Defaults to /backups. Be sure to persist it using a volume to avoid data loss.**
 - DAYS_TO_KEEP: defines the number of days to keep old backups. Based on the modification time.
 - BACKUP_SUFFIX: defines a suffix that is added at the end of the backup filename.
-- BACKUP_DIR: defines the directory in which the backups will be stored.
 - PROMETHEUS_PUSHGATEWAY_URL: URL of the [Prometheus Pushgateway](https://github.com/prometheus/pushgateway) (see [Metrics](#metrics))
 
 ## PostgreSQL
-
-See [./scripts/pg_backup.sh](./scripts/pg_backup.sh) for more information about
-the postgres backups.
 
 ### Configuration
 
@@ -76,24 +76,40 @@ docker run \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0
+    lefeverd/docker-db-backup:0.1.0 postgres backup <database>
 ```
 
 #### Restore
 
-To restore, you can mount the directory containing the backups and executing `pg_restore`, for instance:
+To restore, you can mount the directory containing the backups and restore one of them.  
+You can either list the existing ones and restore by using a filename, or provide an absolute
+path to an existing dump.
+
+To list the previous backups:
 
 ```bash
 docker run \
+    -e BACKUP_DIR=/backups/ \
     -e PGHOST=localhost \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 bash -c \
-    "
-    pg_restore -Fc -d postgres -C \"/backups/<backup-file.dump>\"
-    "
+    lefeverd/docker-db-backup:0.1.0 postgres list
 ```
+
+
+```bash
+docker run \
+    -e BACKUP_DIR=/backups/ \
+    -e PGHOST=localhost \
+    -e PGUSER=postgres \
+    -e PGPASSWORD=postgres \
+    -v <host-backup-directory>:/backups/ \
+    lefeverd/docker-db-backup:0.1.0 postgres restore <file> <database>
+```
+
+You can chose to recreate the database with `--recreate`, or simply create with `--create`,
+which will raise an exception if the database already exists.
 
 ## MySQL
 
@@ -119,7 +135,7 @@ docker run \
     -e MYSQL_USER=test \
     -e MYSQL_PASSWORD=test \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 mysql_backup
+    lefeverd/docker-db-backup:0.1.0 mysql backup <database>
 ```
 
 #### Restore
@@ -128,14 +144,12 @@ To restore, you can mount the directory containing the backups, for instance:
 
 ```bash
 docker run \
+    -e BACKUP_DIR=/backups/ \
     -e MYSQL_HOST=localhost \
     -e MYSQL_USER=test \
     -e MYSQL_PASSWORD=test \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 bash -c \
-    "
-    gunzip < \"/backups/<backup-file.sql.gz>\" | mysql -p -h database-host -u test -ptest test
-    "
+    lefeverd/docker-db-backup:0.1.0 mysql restore <file> <database>
 ```
 
 # Metrics
@@ -158,13 +172,10 @@ The following metrics are pushed:
 
 # Tests
 
-Some basic tests can be run to ensure that the backups are correctly executed and can be restored.
+You can run the tests with:
 
 ```bash
-./tests/integration-test-mysql.sh
-./tests/integration-test-postgres.sh
+make test
+make test-integration-mysql
+make test-integration-postgres
 ```
-
-# Notes
-
-Currently, the script will backup all databases (in separate files).

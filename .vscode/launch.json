@@ -95,7 +95,7 @@
             "args": [
                 "-sv", 
                 "tests_integration/test_postgres.py"
-                //"-k", "test_backup_restore"
+                //"-k", "test_backup_restore_create_database_already_exists"
             ],
             "cwd": "${workspaceRoot}",
             "env": {

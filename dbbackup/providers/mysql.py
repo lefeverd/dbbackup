@@ -130,7 +130,8 @@ class MySQL(AbstractProvider):
             and (a_file.endswith(".sql") or a_file.endswith(".gz")) and
             (config.BACKUP_SUFFIX in a_file if config.BACKUP_SUFFIX else True))
 
-    def restore_backup(self, backup_file, force=None):
+    def restore_backup(self, backup_file, database, recreate=None,
+                       create=None):
         backup_file_path = Path(backup_file)
         if not backup_file_path.is_absolute():
             backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file

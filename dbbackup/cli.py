@@ -11,16 +11,42 @@ class DatabaseCommand(click.MultiCommand):
         super().__init__(name, *args, **kwargs)
         self.provider = providers.get(name)
         self.commands = {
-            "backup": getattr(self.provider, "execute_backup"),
-            "list": getattr(self.provider, "list_backups"),
+            "backup": self.cmd_backup,
+            "list": self.cmd_list,
+            "restore": self.cmd_restore
         }
+
+    def cmd_backup(self):
+        return click.Command(
+            "backup", callback=getattr(self.provider, "execute_backup"))
+
+    def cmd_list(self):
+        return click.Command(
+            "list", callback=getattr(self.provider, "list_backups"))
+
+    def cmd_restore(self):
+        return click.Command(
+            "restore",
+            callback=getattr(self.provider, "restore_backup"),
+            params=[
+                click.Argument(["backup_file"]),
+                click.Argument(["database"]),
+                click.Option(
+                    ["--recreate"],
+                    is_flag=True,
+                    help="Drop the database if it already exists (display a warning if not), \
+                        and create the database."),
+                click.Option(["--create"],
+                             is_flag=True,
+                             help="Create the database. Will raise an \
+                             exception if the database already exists.")
+            ])
 
     def list_commands(self, ctx):
         return self.commands.keys()
 
     def get_command(self, ctx, cmd_name):
-        return click.Command(
-            cmd_name, callback=self.commands.get(cmd_name, None))
+        return self.commands.get(cmd_name)()
 
 
 class RootGroup(click.Group):
