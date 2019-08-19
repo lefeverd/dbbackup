@@ -12,6 +12,8 @@ stages:
   - cleanup
 
 variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
   DOCKER_IMAGE: harbor.horsducommun.be/dbbackup/dbbackup
   DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
   MYSQL_ROOT_PASSWORD: "test"
@@ -19,7 +21,7 @@ variables:
 
 .docker: &docker
   before_script:
-    - export DOCKER_HOST="tcp://localhost:2375"
+    #- export DOCKER_HOST="tcp://localhost:2375"
     - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD harbor.horsducommun.be
 
 # We use --network host in the docker build, see https://github.com/gliderlabs/docker-alpine/issues/307
