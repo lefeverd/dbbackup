@@ -192,7 +192,8 @@ class TestMysql:
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 0
                 backup_file = Path(temp_dir) / "20190101_000000-test-daily.sql"
-                mysql_provider.restore_backup(backup_file.resolve(), "test")
+                mysql_provider.restore_backup(
+                    backup_file.resolve(), "test", create=True)
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -228,7 +229,7 @@ class TestMysql:
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.sql"
-                mysql_provider.restore_backup(backup_file, "test")
+                mysql_provider.restore_backup(backup_file, "test", create=True)
                 users = get_users(mysql_provider, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
@@ -267,8 +268,61 @@ class TestMysql:
                 users = get_users(mysql, "test")
                 assert len(users) == 0
                 backup_file = "20190101_000000-test-daily.sql.gz"
-                mysql.restore_backup(backup_file, "test")
+                mysql.restore_backup(backup_file, "test", create=True)
                 users = get_users(mysql, "test")
                 assert len(users) == 1
                 assert users[0][0] == "1"
                 assert users[0][1] == "supertestuser"
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_restore_other_database(self, mock_datetime, mysql_provider,
+                                           drop_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            str(Path(temp_dir).resolve())):
+                drop_database("testnew")
+                mysql_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.sql"
+                mysql_provider.restore_backup(
+                    backup_file, "testnew", create=True)
+                users = get_users(mysql_provider, "test")
+                assert len(users) == 1
+                assert users[0][0] == "1"
+                assert users[0][1] == "supertestuser"
+                users = get_users(mysql_provider, "testnew")
+                assert len(users) == 1
+                assert users[0][0] == "1"
+                assert users[0][1] == "supertestuser"
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_restore_create_database_already_exists(
+            self, mock_datetime, mysql_provider, drop_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            str(Path(temp_dir).resolve())):
+                mysql_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.sql"
+                with raises(Exception) as e:
+                    mysql_provider.restore_backup(
+                        backup_file, "test", create=True)
+                assert "Could not create database" in str(e.value)
+                assert "database exists" in str(e.value)
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_restore_other_database_unexisting(
+            self, mock_datetime, mysql_provider, drop_database):
+        mock_datetime.return_value = "20190101_000000"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            str(Path(temp_dir).resolve())):
+                drop_database("testnew")
+                mysql_provider.execute_backup()
+                backup_file = "20190101_000000-test-daily.sql"
+                with raises(Exception) as e:
+                    mysql_provider.restore_backup(backup_file, "testnew")
+                assert "Unknown database" in str(e.value)

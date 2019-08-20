@@ -14,6 +14,9 @@ each of which will use different values for `DAYS_TO_KEEP` and `BACKUP_SUFFIX`.
 See `crontab.sample` for some examples.  
 To edit the crontab, use `crontab -e`.
 
+>**WARNING** Use it at your own risk. Please test thoroughly and frequently the dumps to be sure
+you can restore the data when time comes.
+
 <!-- TOC -->
 
 - [Backups DB](#backups-db)

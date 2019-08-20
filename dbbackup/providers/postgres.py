@@ -180,7 +180,9 @@ class Postgres(AbstractProvider):
             try:
                 self._drop_database(database)
             except Exception:
-                _logger.warn(f"Database {database} could not be dropped.")
+                _logger.warn(
+                    f"Database {database} could not be dropped (maybe it doesn't exist)."
+                )
 
         if recreate or create:
             try:

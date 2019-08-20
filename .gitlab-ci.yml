@@ -21,7 +21,6 @@ variables:
 
 .docker: &docker
   before_script:
-    #- export DOCKER_HOST="tcp://localhost:2375"
     - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD harbor.horsducommun.be
 
 # We use --network host in the docker build, see https://github.com/gliderlabs/docker-alpine/issues/307

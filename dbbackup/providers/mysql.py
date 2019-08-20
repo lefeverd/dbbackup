@@ -106,11 +106,17 @@ class MySQL(AbstractProvider):
         _logger.info("Done")
 
     def _get_backup_command(self, database):
-        mysqldump_bin = str(
-            Path(self.mysql_bin_directory + '/mysqldump').resolve())
+        mysqldump_bin_path = Path(self.mysql_bin_directory + '/mysqldump')
+        mysqldump_bin = str(mysqldump_bin_path.resolve())
+        if not mysqldump_bin_path.exists():
+            raise Exception(f"mysqldump binary not found: {mysqldump_bin}")
+
         backup_cmd = [mysqldump_bin]
         backup_cmd += self._get_default_command_args()
-        backup_cmd += ["--databases", f"{database}"]
+        # --databases add the CREATE DATABASE and USE <dbname> in the output
+        #backup_cmd += ["--databases", f"{database}"]
+        # To be able to restore using another database, do not use --databases
+        backup_cmd.append(database)
         _logger.debug(f"command: {backup_cmd}")
         _logger.debug(f"command (str): {(' ').join(backup_cmd)}")
         return backup_cmd
@@ -164,7 +170,23 @@ class MySQL(AbstractProvider):
                 tf.extractall(path=tmpdir)
             backup_file = Path(tmpdir) / Path(backup_file).name[:-3]
 
+        if recreate:
+            try:
+                self._drop_database(database)
+            except Exception:
+                _logger.warn(
+                    f"Database {database} could not be dropped (maybe it doesn't exist)."
+                )
+
+        if recreate or create:
+            try:
+                self._create_database(database)
+            except subprocess.CalledProcessError as e:
+                raise Exception(
+                    f"Could not create database {database}: {e.output}")
+
         command = self._get_restore_command()
+        command += ["--database", database]
         backup_file_fd = open(backup_file)
 
         try:
@@ -182,6 +204,20 @@ class MySQL(AbstractProvider):
                 shutil.rmtree(tmpdir)
             except Exception:
                 _logger.warn(f"Could not delete temporary directory {tmpdir}")
+
+    def _drop_database(self, database):
+        drop_command = self._get_command()
+        drop_command += ["-e", f"DROP DATABASE {database}"]
+        output = subprocess.check_output(
+            drop_command, stderr=subprocess.STDOUT)
+        _logger.debug(f"drop process output {output}")
+
+    def _create_database(self, database):
+        create_command = self._get_command()
+        create_command += ["-e", f"CREATE DATABASE {database}"]
+        output = subprocess.check_output(
+            create_command, stderr=subprocess.STDOUT)
+        _logger.debug(f"drop process output {output}")
 
     def _get_restore_command(self):
         command = self._get_command()

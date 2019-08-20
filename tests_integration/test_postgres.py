@@ -271,7 +271,7 @@ class TestPostgres:
 
     @mock.patch(
         'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')
-    def test_backup_restore_database_already_exists(
+    def test_backup_restore_database_relation_already_exists(
             self, mock_datetime, postgres_provider, drop_postgres_database):
         mock_datetime.return_value = "20190101_000000"
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -283,7 +283,7 @@ class TestPostgres:
                 with raises(Exception) as e:
                     postgres_provider.restore_backup(backup_file, "test")
                 assert "Could not restore database" in str(e.value)
-                assert "already exists" in str(e.value)
+                assert "relation \"users\" already exists" in str(e.value)
 
     @mock.patch(
         'dbbackup.providers.postgres.Postgres._get_formatted_current_datetime')

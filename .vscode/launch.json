@@ -71,7 +71,7 @@
             "args": [
                 "-sv", 
                 "tests_integration/test_mysql.py"
-                //"-k", "test_backup_specific_unexisting_database_backup_database"
+                //"-k", "test_backup_restore"
             ],
             "cwd": "${workspaceRoot}",
             "env": {
@@ -95,7 +95,7 @@
             "args": [
                 "-sv", 
                 "tests_integration/test_postgres.py"
-                //"-k", "test_backup_restore_create_database_already_exists"
+                //"-k", "test_backup_restore_database_already_exists"
             ],
             "cwd": "${workspaceRoot}",
             "env": {
