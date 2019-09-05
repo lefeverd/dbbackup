@@ -13,7 +13,8 @@ class MySQLDatabaseCommand(click.MultiCommand):
         self.commands = {
             "backup": self.cmd_backup,
             "list": self.cmd_list,
-            "restore": self.cmd_restore
+            "restore": self.cmd_restore,
+            "cleanup": self.cmd_cleanup
         }
 
     def cmd_backup(self):
@@ -52,6 +53,13 @@ class MySQLDatabaseCommand(click.MultiCommand):
                              exception if the database already exists.")
             ])
 
+    def cmd_cleanup(self):
+        return click.Command(
+            "cleanup", 
+            callback=getattr(self.provider, "cleanup"),
+            params=[
+                click.Argument(["days_to_keep"])])
+
     def list_commands(self, ctx):
         return self.commands.keys()
 
@@ -66,7 +74,8 @@ class PostgreSQLDatabaseCommand(click.MultiCommand):
         self.commands = {
             "backup": self.cmd_backup,
             "list": self.cmd_list,
-            "restore": self.cmd_restore
+            "restore": self.cmd_restore,
+            "cleanup": self.cmd_cleanup
         }
 
     def cmd_backup(self):
@@ -102,6 +111,13 @@ class PostgreSQLDatabaseCommand(click.MultiCommand):
                              help="Create the database. Will raise an "
                              "exception if the database already exists.")
             ])
+
+    def cmd_cleanup(self):
+        return click.Command(
+            "cleanup", 
+            callback=getattr(self.provider, "cleanup"),
+            params=[
+                click.Argument(["days_to_keep"])])
 
     def list_commands(self, ctx):
         return self.commands.keys()

@@ -48,8 +48,8 @@
             "module": "pytest",
             "args": [
                 "-sv", 
-                "tests/", 
-                //"-k", "test_backup_database"
+                "tests/",
+                //"-k", "test_cleanup_one_days"
             ],
             "cwd": "${workspaceRoot}",
             "env": {},

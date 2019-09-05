@@ -1,4 +1,6 @@
 import abc
+from datetime import datetime
+import os
 from importlib import import_module
 import inspect
 from pathlib import Path
@@ -21,6 +23,30 @@ class AbstractProvider(abc.ABC):
     @abc.abstractclassmethod
     def list_backups(self):
         pass
+
+    @abc.abstractclassmethod
+    def restore_backup(self, backup_file, database, recreate=None,
+                       create=None):
+        pass
+
+    def cleanup(self, days_to_keep):
+        backups = self.get_backups()
+        for backup in backups:
+            backup_absolute = Path(config.BACKUP_DIRECTORY + "/" + backup)
+            if self._is_older_than(backup_absolute, days_to_keep):
+                _logger.info(
+                    f"Removing backup {backup} >= {days_to_keep} days")
+                self._remove(backup_absolute)
+
+    def _is_older_than(self, backup, days):
+        now = datetime.now().timestamp()
+        backup_timestamp = os.path.getmtime(backup)
+        age_days = (now - backup_timestamp) / (60 * 60 * 24)
+        _logger.debug(f"Backup {backup} age {age_days} days")
+        return age_days >= float(days)
+
+    def _remove(self, backup):
+        return backup.unlink()
 
     def verify_backup_file(self, backup_file):
         backup_file_path = Path(backup_file)
