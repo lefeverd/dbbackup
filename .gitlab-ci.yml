@@ -1,6 +1,6 @@
 image: docker:stable
 services:
-- docker:dind
+- docker:19.03.1-dind
 - mysql:5.7
 - postgres:11.5
 
