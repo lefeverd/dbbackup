@@ -11,7 +11,7 @@ import shutil
 from dbbackup.providers import AbstractProvider
 from dbbackup import config
 from dbbackup.tempbackupfile import TemporaryBackupFile
-from dbbackup.utils import sizeof_fmt
+from dbbackup.utils import get_file_size, sizeof_fmt
 
 _logger = logging.getLogger(__name__)
 DEFAULT_MYSQL_HOST = "127.0.0.1"
@@ -66,7 +66,14 @@ class MySQL(AbstractProvider):
 
         _logger.debug(f"Starting backup of databases: {databases}")
         for database in databases:
-            self.backup_database(database)
+            filename = self.backup_database(database)
+            size = get_file_size(
+                str(
+                    Path(config.BACKUP_DIRECTORY + "/" + filename +
+                         (self.compress and ".gz" or "")).resolve()))
+            self.notify_callbacks('backup_done',
+                                  datetime.now().isoformat(), database,
+                                  filename, size)
 
     def get_databases(self):
         get_db_cmd = self._get_databases_command()
@@ -102,8 +109,8 @@ class MySQL(AbstractProvider):
                 raise Exception(
                     f"Could not backup database {database}: retcode {e.returncode} - stderr {e.stderr}."
                 )
-
         _logger.info("Done")
+        return filename
 
     def _get_backup_command(self, database):
         mysqldump_bin_path = Path(self.mysql_bin_directory + '/mysqldump')
@@ -137,9 +144,8 @@ class MySQL(AbstractProvider):
             self.display_backup(backup_file)
 
     def display_backup(self, backup_file):
-        size = os.stat(
-            str(Path(config.BACKUP_DIRECTORY + "/" +
-                     backup_file).resolve())).st_size
+        size = get_file_size(
+            str(Path(config.BACKUP_DIRECTORY + "/" + backup_file).resolve()))
         print(f"{backup_file}\t{sizeof_fmt(size)}")
 
     def get_backups(self):

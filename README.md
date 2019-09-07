@@ -34,6 +34,8 @@ you can restore the data when time comes.
             - [Restore](#restore-1)
 - [Metrics](#metrics)
 - [Tests](#tests)
+- [Code](#code)
+    - [Architecture](#architecture)
 
 <!-- /TOC -->
 
@@ -182,3 +184,19 @@ make test
 make test-integration-mysql
 make test-integration-postgres
 ```
+
+# Code
+
+## Architecture
+
+The code is organized in the following modules:
+
+- providers, which contains classes that inherits the `AbstractProvider`, for instance
+one to handle MySQL backups, another to handle PostgreSQL.  
+These classes should be completely isolated from the rest of the application, in order
+to be easily testable.
+- builders, which contains classes that can build providers based on the configuration.  
+The application configuration is mainly done through environment variables (see `config.py`),
+so they are mainly getting values from there and creating the `providers`.
+- callbacks, which contains the classes that can be registered to receive callbacks and
+handle them, for instance the Prometheus Pushgateway one.

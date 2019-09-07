@@ -8,6 +8,14 @@ from dbbackup.providers import mysql
 from tempfile import TemporaryDirectory, _TemporaryFileWrapper
 
 
+def Any(cls):
+    class Any(cls):
+        def __eq__(self, other):
+            return True
+
+    return Any()
+
+
 class TestMysqlProvider(unittest.TestCase):
     def test_default_command_args_default_values(self):
         provider = mysql.MySQL()
@@ -38,8 +46,11 @@ class TestMysqlProvider(unittest.TestCase):
     @mock.patch(
         'dbbackup.providers.mysql.MySQL.backup_database', autospec=True)
     @mock.patch('dbbackup.providers.mysql.MySQL.get_databases', autospec=True)
-    def test_execute_backup(self, mock_get_databases, mock_backup_database):
-        mock_backup_database.return_value = True
+    @mock.patch('dbbackup.providers.mysql.get_file_size', autospec=True)
+    def test_execute_backup(self, mock_get_file_size, mock_get_databases,
+                            mock_backup_database):
+        mock_get_file_size.return_value = "1024"
+        mock_backup_database.return_value = '20190101_000000-test-daily.sql'
         mock_get_databases.return_value = ['test_database', 'test_database2']
         provider = mysql.MySQL()
         provider.execute_backup()
@@ -47,6 +58,24 @@ class TestMysqlProvider(unittest.TestCase):
             mock.call(provider, 'test_database'),  # Method is called with self
             mock.call(provider, 'test_database2')
         ])
+
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL.backup_database', autospec=True)
+    @mock.patch('dbbackup.providers.mysql.MySQL.get_databases', autospec=True)
+    @mock.patch('dbbackup.providers.mysql.get_file_size', autospec=True)
+    def test_execute_backup_callback(self, mock_get_file_size,
+                                     mock_get_databases, mock_backup_database):
+        mock_get_file_size.return_value = "1024"
+        mock_backup_database.return_value = '20190101_000000-test-daily.sql'
+        mock_get_databases.return_value = ['test']
+        provider = mysql.MySQL()
+
+        callback = mock.Mock()
+
+        provider.register_callback(callback)
+        provider.execute_backup()
+        callback.backup_done.assert_called_with(
+            Any(str), 'test', '20190101_000000-test-daily.sql', '1024')
 
     @mock.patch('dbbackup.providers.mysql.TemporaryBackupFile.close')
     @mock.patch('dbbackup.providers.mysql.subprocess.run')

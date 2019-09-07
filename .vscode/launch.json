@@ -49,7 +49,7 @@
             "args": [
                 "-sv", 
                 "tests/",
-                //"-k", "test_cleanup_one_days"
+                "-k", "test_execute_backup"
             ],
             "cwd": "${workspaceRoot}",
             "env": {},
@@ -70,8 +70,8 @@
             "module": "pytest",
             "args": [
                 "-sv", 
-                "tests_integration/test_mysql.py"
-                //"-k", "test_backup_restore"
+                "tests_integration/test_mysql.py",
+                //"-k", "test_backup_done_pushgateway_callback"
             ],
             "cwd": "${workspaceRoot}",
             "env": {
@@ -100,6 +100,29 @@
             "cwd": "${workspaceRoot}",
             "env": {
                 "ENV_FILE": ".env.test.postgres"
+            },
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
+          },
+          {
+            "name": "PyTest integration pushgateway",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/test_prometheus_pushgateway.py"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "ENV_FILE": ".env.test.prometheus"
             },
             "envFile": "${workspaceRoot}/.fake.env",
             "debugOptions": [

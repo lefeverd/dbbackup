@@ -16,6 +16,8 @@ class ProviderClassNotFoundError(Exception):
 
 
 class AbstractProvider(abc.ABC):
+    callbacks = []
+
     @abc.abstractclassmethod
     def execute_backup(self, database=None, exclude=None):
         pass
@@ -65,6 +67,17 @@ class AbstractProvider(abc.ABC):
                     {config.BACKUP_DIRECTORY}")
 
         return str(backup_file_path)
+
+    def register_callback(self, callback):
+        self.callbacks.append(callback)
+
+    def notify_callbacks(self, event, *args, **kwargs):
+        for callback in self.callbacks:
+            try:
+                getattr(callback, event)(*args, **kwargs)
+            except Exception as e:
+                _logger.warn(
+                    f"Could not call method {event} on callback {callback}", e)
 
 
 def get_builder_module(module_name):

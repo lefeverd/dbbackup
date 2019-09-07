@@ -3,11 +3,13 @@ import subprocess
 from unittest import mock
 from pathlib import Path
 import tempfile
+import requests
 
 from pytest import raises, mark
 
 from dbbackup import config
 from dbbackup.providers.mysql import MySQL
+from dbbackup.callbacks.prometheus import PrometheusPushGatewayCallback
 
 
 def get_users(mysql_provider, database):
@@ -144,6 +146,38 @@ class TestMysql:
                 assert "20190101_000000-sys-daily.sql.gz" in backups
                 assert "20190101_000000-mysql-daily.sql.gz" in backups
                 assert "20190101_000000-test-daily.sql.gz" in backups
+
+    @mock.patch(
+        'dbbackup.callbacks.prometheus.PrometheusPushGatewayCallback.get_hostname'
+    )
+    @mock.patch(
+        'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')
+    def test_backup_done_pushgateway_callback(self, mock_datetime,
+                                              mock_get_hostname):
+        mock_datetime.return_value = "20190101_000000"
+        mock_get_hostname.return_value = "myhostname"
+        mysql = MySQL(
+            user=config.MYSQL_USER,
+            password=config.MYSQL_PASSWORD,
+            host=config.MYSQL_HOST,
+            mysql_bin_directory=config.MYSQL_BIN_DIRECTORY)
+        pushgateway_callback = PrometheusPushGatewayCallback(
+            config.PROMETHEUS_PUSHGATEWAY_URL)
+        mysql.register_callback(pushgateway_callback)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch('dbbackup.providers.mysql.config.BACKUP_DIRECTORY',
+                            temp_dir):
+                mysql.execute_backup()
+                response = requests.get(
+                    f"{config.PROMETHEUS_PUSHGATEWAY_URL}/metrics")
+                assert response.status_code == 200
+                metrics = response.text
+                assert 'dbbackup_last_backup_file_size{instance="",job="myhostname-test"}' in metrics
+                assert 'dbbackup_last_success_timestamp{instance="",job="myhostname-test"}' in metrics
+                assert 'dbbackup_last_backup_file_size{instance="",job="myhostname-mysql"}' in metrics
+                assert 'dbbackup_last_success_timestamp{instance="",job="myhostname-mysql"}' in metrics
+                assert 'dbbackup_last_backup_file_size{instance="",job="myhostname-sys"}' in metrics
+                assert 'dbbackup_last_success_timestamp{instance="",job="myhostname-sys"}' in metrics
 
     @mock.patch(
         'dbbackup.providers.mysql.MySQL._get_formatted_current_datetime')

@@ -9,3 +9,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "test"
       MYSQL_DATABASE: test
+
+  pushgateway-mysql:
+    image: prom/pushgateway
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
