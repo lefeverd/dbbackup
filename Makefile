@@ -20,3 +20,9 @@ test-integration-postgres:
 	sleep 5
 	ENV_FILE=.env.test.postgres ./venv/bin/pytest tests_integration/test_postgres.py
 	docker-compose -f docker-compose-postgres.yaml stop && docker-compose -f docker-compose-postgres.yaml rm -f
+
+test-integration-prometheus:
+	docker-compose -f docker-compose-prometheus.yaml up -d
+	sleep 5
+	./venv/bin/pytest tests_integration/test_prometheus_pushgateway.py
+	docker-compose -f docker-compose-prometheus.yaml stop && docker-compose -f docker-compose-prometheus.yaml rm -f
