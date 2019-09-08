@@ -3,6 +3,7 @@ services:
 - docker:18.09.8-dind
 - mysql:5.7
 - postgres:11.5
+- prom/pushgateway:v0.9.1
 
 stages:
   - build
@@ -62,7 +63,7 @@ test-integration-mysql:
         -e "MYSQL_PASSWORD=test"
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
-        -e "PROMETHEUS_PUSHGATEWAY_URL=http://127.0.0.1:9091"
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
         --entrypoint pytest
         $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_mysql.py
 
@@ -79,7 +80,7 @@ test-integration-postgres:
         -e "PGPASSWORD=test"
         -e "LOG_LEVEL=DEBUG"
         -e "BACKUP_SUFFIX=-daily"
-        -e "PROMETHEUS_PUSHGATEWAY_URL=http://127.0.0.1:9091"
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
         --entrypoint pytest
         $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_postgres.py
 
@@ -90,7 +91,7 @@ test-integration-prometheus:
     - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
     - > 
         docker run 
-        -e "PROMETHEUS_PUSHGATEWAY_URL=http://127.0.0.1:9091"
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
         --entrypoint pytest
         $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_prometheus_pushgateway.py
 
