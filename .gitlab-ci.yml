@@ -1,5 +1,5 @@
 image: docker:stable
-services:
+services: &services
 - docker:18.09.8-dind
 
 stages:
@@ -52,6 +52,7 @@ test-integration-mysql:
   <<: *docker
   stage: test-integration
   services:
+    <<: *services
     - mysql:5.7
     - prom/pushgateway:v0.9.1
   script:
@@ -71,6 +72,7 @@ test-integration-postgres:
   <<: *docker
   stage: test-integration
   services:
+    <<: *services
     - postgres:11.5
   script:
     - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
@@ -90,6 +92,7 @@ test-integration-prometheus:
   <<: *docker
   stage: test-integration
   services:
+    <<: *services
     - prom/pushgateway:v0.9.1
   script:
     - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
