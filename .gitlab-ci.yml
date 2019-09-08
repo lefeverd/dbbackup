@@ -1,6 +1,4 @@
 image: docker:stable
-services: &services
-- docker:18.09.8-dind
 
 stages:
   - build
@@ -18,6 +16,8 @@ variables:
   MYSQL_DATABASE: test
 
 .docker: &docker
+  services:
+    - docker:18.09.8-dind
   before_script:
     - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD harbor.horsducommun.be
 
@@ -52,7 +52,7 @@ test-integration-mysql:
   <<: *docker
   stage: test-integration
   services:
-    <<: *services
+    - docker:18.09.8-dind
     - mysql:5.7
     - prom/pushgateway:v0.9.1
   script:
@@ -72,7 +72,7 @@ test-integration-postgres:
   <<: *docker
   stage: test-integration
   services:
-    <<: *services
+    - docker:18.09.8-dind
     - postgres:11.5
   script:
     - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
@@ -92,7 +92,7 @@ test-integration-prometheus:
   <<: *docker
   stage: test-integration
   services:
-    <<: *services
+    - docker:18.09.8-dind
     - prom/pushgateway:v0.9.1
   script:
     - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
