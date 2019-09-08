@@ -24,5 +24,5 @@ test-integration-postgres:
 test-integration-prometheus:
 	docker-compose -f docker-compose-prometheus.yaml up -d
 	sleep 5
-	./venv/bin/pytest tests_integration/test_prometheus_pushgateway.py
+	ENV_FILE=.env.test.mysql ./venv/bin/pytest tests_integration/test_prometheus_pushgateway.py
 	docker-compose -f docker-compose-prometheus.yaml stop && docker-compose -f docker-compose-prometheus.yaml rm -f

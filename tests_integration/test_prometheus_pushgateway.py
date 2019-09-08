@@ -1,6 +1,7 @@
 from unittest import mock
 from datetime import datetime
 import requests
+from dbbackup import config
 from dbbackup.callbacks.prometheus import PrometheusPushGatewayCallback
 
 
@@ -10,10 +11,11 @@ class TestPrometheusPushgateway:
     )
     def test_backup_done(self, mock_get_hostname):
         mock_get_hostname.return_value = "myhostname"
-        pushgateway = PrometheusPushGatewayCallback("127.0.0.1:9091")
+        pushgateway = PrometheusPushGatewayCallback(
+            config.PROMETHEUS_PUSHGATEWAY_URL)
         pushgateway.backup_done(datetime.now().isoformat(), "test", "test.sql",
                                 "1024")
-        response = requests.get("http://127.0.0.1:9091/metrics")
+        response = requests.get(f"{config.PROMETHEUS_PUSHGATEWAY_URL}/metrics")
         assert response.status_code == 200
         metrics = response.text
         assert 'dbbackup_last_backup_file_size{instance="",job="myhostname-test"} 1024' in metrics
@@ -29,12 +31,13 @@ class TestPrometheusPushgateway:
         which is a concatenation of the hostname and the database).
         """
         mock_get_hostname.return_value = "myhostname"
-        pushgateway = PrometheusPushGatewayCallback("127.0.0.1:9091")
+        pushgateway = PrometheusPushGatewayCallback(
+            config.PROMETHEUS_PUSHGATEWAY_URL)
         pushgateway.backup_done(datetime.now().isoformat(), "test", "test.sql",
                                 "1024")
         pushgateway.backup_done(datetime.now().isoformat(), "test", "test.sql",
                                 "2048")
-        response = requests.get("http://127.0.0.1:9091/metrics")
+        response = requests.get(f"{config.PROMETHEUS_PUSHGATEWAY_URL}/metrics")
         assert response.status_code == 200
         metrics = response.text
         assert 'dbbackup_last_backup_file_size{instance="",job="myhostname-test"} 2048' in metrics
