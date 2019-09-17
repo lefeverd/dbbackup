@@ -1,7 +1,7 @@
 import logging
 import click
 
-from dbbackup import providers
+from dbbackup import builders
 
 _logger = logging.getLogger(__package__)
 
@@ -9,7 +9,7 @@ _logger = logging.getLogger(__package__)
 class MySQLDatabaseCommand(click.MultiCommand):
     def __init__(self, name, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
-        self.provider = providers.get(name)
+        self.provider = builders.get(name)
         self.commands = {
             "backup": self.cmd_backup,
             "list": self.cmd_list,
@@ -70,7 +70,7 @@ class MySQLDatabaseCommand(click.MultiCommand):
 class PostgreSQLDatabaseCommand(click.MultiCommand):
     def __init__(self, name, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
-        self.provider = providers.get(name)
+        self.provider = builders.get(name)
         self.commands = {
             "backup": self.cmd_backup,
             "list": self.cmd_list,

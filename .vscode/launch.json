@@ -49,7 +49,7 @@
             "args": [
                 "-sv", 
                 "tests/",
-                "-k", "test_execute_backup"
+                "-k", "test_get_provider_unexisting"
             ],
             "cwd": "${workspaceRoot}",
             "env": {},
