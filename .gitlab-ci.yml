@@ -124,3 +124,5 @@ cleanup:
     # repository is dbbackup/dbbackup, urlencoded
     - curl -u $DOCKER_USERNAME:$DOCKER_PASSWORD -XDELETE "https://harbor.horsducommun.be/api/repositories/dbbackup%2Fdbbackup/tags/${DOCKER_IMAGE_TAG}"
   allow_failure: true
+  except:
+    - master

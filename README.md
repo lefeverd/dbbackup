@@ -1,15 +1,9 @@
 # DBBackup
 
 A simple and easy CLI to backup and restore databases.  
-You can also use it as a Python module or from the Docker image.
+It is originally meant to be used as a Docker image, for instance
+from crons, in order to launch a Docker container to backup databases at regular intervals.
 
-It supports the following database engines:
-
-- PostgreSQL
-- MySQL
-
-It is originally meant to be used in a cron, which can launch a Docker container 
-based on this image to backup databases at regular intervals.  
 You can create multiple crons based on your retention policy, for instance a daily, monthly and yearly cron,
 each of which will use different values for `DAYS_TO_KEEP` and `BACKUP_SUFFIX`.
 
@@ -18,6 +12,11 @@ To edit the crontab, use `crontab -e`.
 
 >**WARNING** Use it at your own risk. Please test thoroughly and frequently the dumps to be sure
 you can restore the data when time comes.
+
+It supports the following database engines:
+
+- PostgreSQL
+- MySQL
 
 <!-- TOC -->
 
