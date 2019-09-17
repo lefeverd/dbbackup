@@ -1,0 +1,136 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    // Pour plus d'informations, visitez : https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: mysql backup",
+            "type": "python",
+            "request": "launch",
+            "module": "dbbackup",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.fake",
+            "env": {
+                "ENV_FILE": ".fake",
+                "BACKUP_DIRECTORY": "/tmp/",
+            },
+            "args": [
+                "mysql",
+                "backup"
+            ]
+        },
+        {
+            "name": "Python: mysql list",
+            "type": "python",
+            "request": "launch",
+            "module": "dbbackup",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "args": [
+                "mysql",
+                "list"
+            ]
+        },
+        {
+            "name": "PyTest",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests/",
+                "-k", "test_get_provider_unexisting"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {},
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
+          },
+          {
+            "name": "PyTest integration mysql",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/test_mysql.py",
+                //"-k", "test_backup_done_pushgateway_callback"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "ENV_FILE": ".env.test.mysql"
+            },
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
+          },
+          {
+            "name": "PyTest integration postgres",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/test_postgres.py"
+                //"-k", "test_backup_restore_database_already_exists"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "ENV_FILE": ".env.test.postgres"
+            },
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
+          },
+          {
+            "name": "PyTest integration pushgateway",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "module": "pytest",
+            "args": [
+                "-sv", 
+                "tests_integration/test_prometheus_pushgateway.py"
+            ],
+            "cwd": "${workspaceRoot}",
+            "env": {
+                "ENV_FILE": ".env.test.prometheus"
+            },
+            "envFile": "${workspaceRoot}/.fake.env",
+            "debugOptions": [
+              "WaitOnAbnormalExit",
+              "WaitOnNormalExit",
+              "RedirectOutput"
+            ],
+            "justMyCode": false,
+          },
+    ]
+}

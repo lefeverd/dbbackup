@@ -1,0 +1,126 @@
+image: docker:stable
+
+stages:
+  - build
+  - test
+  - test-integration
+  - release
+  - cleanup
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_IMAGE: harbor.horsducommun.be/dbbackup/dbbackup
+  DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  MYSQL_ROOT_PASSWORD: "test"
+  MYSQL_DATABASE: test
+
+.docker: &docker
+  services:
+    - docker:18.09.8-dind
+  before_script:
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD harbor.horsducommun.be
+
+# We use --network host in the docker build, see https://github.com/gliderlabs/docker-alpine/issues/307
+build:
+  <<: *docker
+  stage: build
+  script:
+    - echo "BUILDING IMAGE $DOCKER_IMAGE:$DOCKER_IMAGE_TAG"
+    - docker build --network host --pull -t $DOCKER_IMAGE:$DOCKER_IMAGE_TAG -f Dockerfile .
+    - docker push $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+
+test:
+  <<: *docker
+  stage: test
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "BACKUP_DIRECTORY=/tmp/"
+        -e "MYSQL_HOST=localhost"
+        -e "MYSQL_PASSWORD=test"
+        -e "LOG_LEVEL=DEBUG"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests
+
+# For the mysql hostname, in kubernetes executor, services are in same pod (different container), 
+# see https://gitlab.com/gitlab-org/gitlab-runner/issues/2677#note_67671527
+# The twist here is that we run dind, so it is set to the docker0 interface IP, 
+# as we need to access the postgres service from inside the test docker image.
+test-integration-mysql:
+  <<: *docker
+  stage: test-integration
+  services:
+    - docker:18.09.8-dind
+    - mysql:5.7
+    - prom/pushgateway:v0.9.1
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "BACKUP_DIRECTORY=/tmp/"
+        -e "MYSQL_HOST=172.17.0.1"
+        -e "MYSQL_PASSWORD=test"
+        -e "LOG_LEVEL=DEBUG"
+        -e "BACKUP_SUFFIX=-daily"
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_mysql.py
+
+test-integration-postgres:
+  <<: *docker
+  stage: test-integration
+  services:
+    - docker:18.09.8-dind
+    - postgres:11.5
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "BACKUP_DIRECTORY=/tmp/"
+        -e "PGHOST=172.17.0.1"
+        -e "PGUSER=postgres"
+        -e "PGPASSWORD=test"
+        -e "LOG_LEVEL=DEBUG"
+        -e "BACKUP_SUFFIX=-daily"
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_postgres.py
+
+test-integration-prometheus:
+  <<: *docker
+  stage: test-integration
+  services:
+    - docker:18.09.8-dind
+    - prom/pushgateway:v0.9.1
+  script:
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - > 
+        docker run 
+        -e "PROMETHEUS_PUSHGATEWAY_URL=http://172.17.0.1:9091"
+        --entrypoint pytest
+        $DOCKER_IMAGE:$DOCKER_IMAGE_TAG tests_integration/test_prometheus_pushgateway.py
+
+release:
+  <<: *docker
+  stage: release
+  script:
+    - export RELEASE_DATE=`date +%Y%m%d-%H%M%S`
+    - docker pull $DOCKER_IMAGE:$DOCKER_IMAGE_TAG
+    - docker tag "$DOCKER_IMAGE:$DOCKER_IMAGE_TAG" "${DOCKER_IMAGE}:latest"
+    - docker tag "$DOCKER_IMAGE::$DOCKER_IMAGE_TAG" "${DOCKER_IMAGE}:${RELEASE_DATE}-${DOCKER_IMAGE_TAG}"
+    - docker push "${DOCKER_IMAGE}:latest"
+    - docker push "${DOCKER_IMAGE}:${RELEASE_DATE}-${DOCKER_IMAGE_TAG}"
+  only:
+    - master
+
+# We use harbor as the docker registry, mark the test image to be deleted (gc is running periodically).
+cleanup:
+  image: alpine
+  stage: cleanup
+  script:
+    - apk add curl
+    # repository is dbbackup/dbbackup, urlencoded
+    - curl -u $DOCKER_USERNAME:$DOCKER_PASSWORD -XDELETE "https://harbor.horsducommun.be/api/repositories/dbbackup%2Fdbbackup/tags/${DOCKER_IMAGE_TAG}"
+  allow_failure: true
