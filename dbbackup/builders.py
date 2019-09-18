@@ -69,7 +69,9 @@ class MySQLConfigBuilder:
             kwargs["password"] = config.MYSQL_PASSWORD
         if exclude_databases:
             kwargs["exclude_databases"] = exclude_databases
-        instance = MySQL(**kwargs)
+        if config.BACKUP_SUFFIX:
+            kwargs["backup_suffix"] = config.BACKUP_SUFFIX
+        instance = MySQL(config.BACKUP_DIRECTORY, **kwargs)
         self._instance = instance
         return instance
 
@@ -92,6 +94,8 @@ class PostgresConfigBuilder:
             kwargs["backup_type"] = config.PG_BACKUP_TYPE
         if exclude_databases:
             kwargs["exclude_databases"] = exclude_databases
-        instance = Postgres(**kwargs)
+        if config.BACKUP_SUFFIX:
+            kwargs["backup_suffix"] = config.BACKUP_SUFFIX
+        instance = Postgres(config.BACKUP_DIRECTORY, **kwargs)
         self._instance = instance
         return instance

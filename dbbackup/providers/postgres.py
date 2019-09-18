@@ -9,9 +9,8 @@ import tempfile
 import shutil
 
 from dbbackup.providers import AbstractProvider
-from dbbackup import config
 from dbbackup.tempbackupfile import TemporaryBackupFile
-from dbbackup.utils import sizeof_fmt
+from dbbackup.utils import get_file_size, sizeof_fmt
 
 _logger = logging.getLogger(__name__)
 DEFAULT_PSQL_HOST = "127.0.0.1"
@@ -20,23 +19,26 @@ DEFAULT_PSQL_USER = "postgres"
 DEFAULT_PSQL_BIN_DIRECTORY = "/usr/local/bin/"
 DEFAULT_EXCLUDE_DATABASES = []
 DEFAULT_BACKUP_TYPE = "c"  # c|d|t|p (custom, directory, tar, plain text)
-"""
-PostgreSQL backup provider.
-"""
 
 
 class Postgres(AbstractProvider):
+    """
+    PostgreSQL backup provider.
+    Postgres environment variables will be respected,
+    see https://www.postgresql.org/docs/9.3/libpq-envars.html
+    """
+
     def __init__(self,
+                 backup_directory,
                  psql_bin_directory=DEFAULT_PSQL_BIN_DIRECTORY,
                  exclude_databases=DEFAULT_EXCLUDE_DATABASES,
-                 backup_type=DEFAULT_BACKUP_TYPE):
-        """
-        Postgres environment variables will be respected,
-        see https://www.postgresql.org/docs/9.3/libpq-envars.html
-        """
+                 backup_type=DEFAULT_BACKUP_TYPE,
+                 backup_suffix=None):
+        super().__init__(backup_directory)
         self.psql_bin_directory = psql_bin_directory
         self.exclude_databases = exclude_databases
         self.backup_type = backup_type
+        self.backup_suffix = backup_suffix
         self.validate_config()
 
     def validate_config(self):
@@ -61,7 +63,12 @@ class Postgres(AbstractProvider):
 
         _logger.debug(f"Starting backup of databases: {databases}")
         for database in databases:
-            self.backup_database(database)
+            filename = self.backup_database(database)
+            size = get_file_size(
+                str(Path(self.backup_directory + "/" + filename).resolve()))
+            self.notify_callbacks('backup_done',
+                                  datetime.now().isoformat(), database,
+                                  filename, size)
 
     def get_databases(self):
         get_db_cmd = self._get_databases_command()
@@ -91,8 +98,7 @@ class Postgres(AbstractProvider):
     def backup_database(self, database):
         _logger.info(f"Starting backup for database {database}")
         filename = self.construct_backup_filename(database)
-        with TemporaryBackupFile(filename,
-                                 config.BACKUP_DIRECTORY) as temp_file:
+        with TemporaryBackupFile(filename, self.backup_directory) as temp_file:
             backup_cmd = self._get_backup_command(database)
             try:
                 subprocess.run(backup_cmd, check=True, stdout=temp_file)
@@ -101,6 +107,7 @@ class Postgres(AbstractProvider):
                     f"Could not backup database {database}: retcode {e.returncode} - stderr {e.stderr}."
                 )
         _logger.info("Done")
+        return filename
 
     def _get_backup_command(self, database):
         pg_dump_bin_path = Path(self.psql_bin_directory + '/pg_dump')
@@ -118,7 +125,7 @@ class Postgres(AbstractProvider):
 
     def construct_backup_filename(self, database):
         date_str = self._get_formatted_current_datetime()
-        suffix = config.BACKUP_SUFFIX or ""
+        suffix = self.backup_suffix or ""
         extension = self.get_extension()
         return f"{date_str}-{database}{suffix}{extension}"
 
@@ -135,20 +142,20 @@ class Postgres(AbstractProvider):
 
     def list_backups(self):
         _logger.debug("Listing backups")
-        _logger.info(f"Backup directory: {config.BACKUP_DIRECTORY}")
+        _logger.info(f"Backup directory: {self.backup_directory}")
         backup_files = self.get_backups()
         for backup_file in backup_files:
             self.display_backup(backup_file)
 
     def display_backup(self, backup_file):
         size = os.stat(
-            str(Path(config.BACKUP_DIRECTORY + "/" +
+            str(Path(self.backup_directory + "/" +
                      backup_file).resolve())).st_size
         print(f"{backup_file}\t{sizeof_fmt(size)}")
 
     def get_backups(self):
         backup_files = [
-            a_file for a_file in os.listdir(config.BACKUP_DIRECTORY)
+            a_file for a_file in os.listdir(self.backup_directory)
             if self.is_backup(a_file)
         ]
         backup_files.sort(reverse=True)
@@ -156,11 +163,11 @@ class Postgres(AbstractProvider):
 
     def is_backup(self, a_file):
         file_name = Path(a_file).name
-        return (re.search(r"^\d{8}_\d{6}.*", file_name)
-                and (file_name.endswith(".sql") or file_name.endswith(".tar")
-                     or file_name.endswith(".dump"))
-                and (config.BACKUP_SUFFIX in file_name
-                     if config.BACKUP_SUFFIX else True))
+        return (
+            re.search(r"^\d{8}_\d{6}.*", file_name)
+            and (file_name.endswith(".sql") or file_name.endswith(".tar")
+                 or file_name.endswith(".dump")) and
+            (self.backup_suffix in file_name if self.backup_suffix else True))
 
     def restore_backup(self, backup_file, database, recreate=None,
                        create=None):

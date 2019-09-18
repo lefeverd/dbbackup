@@ -4,13 +4,14 @@ import os
 from pathlib import Path
 import logging
 
-from dbbackup import config
-
 _logger = logging.getLogger(__name__)
 
 
 class AbstractProvider(abc.ABC):
     callbacks = []
+
+    def __init__(self, backup_directory):
+        self.backup_directory = backup_directory
 
     @abc.abstractclassmethod
     def execute_backup(self, database=None, exclude=None):
@@ -28,7 +29,7 @@ class AbstractProvider(abc.ABC):
     def cleanup(self, days_to_keep):
         backups = self.get_backups()
         for backup in backups:
-            backup_absolute = Path(config.BACKUP_DIRECTORY + "/" + backup)
+            backup_absolute = Path(self.backup_directory + "/" + backup)
             if self._is_older_than(backup_absolute, days_to_keep):
                 _logger.info(
                     f"Removing backup {backup} >= {days_to_keep} days")
@@ -47,18 +48,18 @@ class AbstractProvider(abc.ABC):
     def verify_backup_file(self, backup_file):
         backup_file_path = Path(backup_file)
         if not backup_file_path.is_absolute():
-            backup_file_path = Path(config.BACKUP_DIRECTORY) / backup_file
+            backup_file_path = Path(self.backup_directory) / backup_file
             backup_file_path = backup_file_path.resolve()
 
         if not backup_file_path.exists():
             raise Exception(f"File {backup_file_path} does not exist.")
 
         try:
-            backup_file_path.relative_to(config.BACKUP_DIRECTORY)
+            backup_file_path.relative_to(self.backup_directory)
         except ValueError:
             raise Exception(
                 f"File {backup_file} is not inside BACKUP_DIRECTORY \
-                    {config.BACKUP_DIRECTORY}")
+                    {self.backup_directory}")
 
         return str(backup_file_path)
 

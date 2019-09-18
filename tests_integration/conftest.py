@@ -1,6 +1,7 @@
 import subprocess
-
 import pytest
+from pathlib import Path
+import tempfile
 
 from dbbackup import config
 from dbbackup.providers.mysql import MySQL
@@ -9,18 +10,23 @@ from dbbackup.providers.postgres import Postgres
 
 @pytest.fixture()
 def mysql_provider():
-    mysql = MySQL(
-        user=config.MYSQL_USER,
-        password=config.MYSQL_PASSWORD,
-        host=config.MYSQL_HOST,
-        mysql_bin_directory=config.MYSQL_BIN_DIRECTORY)
-    return mysql
+    with tempfile.TemporaryDirectory() as temp_dir:
+        mysql = MySQL(
+            str(Path(temp_dir).resolve()),
+            user=config.MYSQL_USER,
+            password=config.MYSQL_PASSWORD,
+            host=config.MYSQL_HOST,
+            mysql_bin_directory=config.MYSQL_BIN_DIRECTORY)
+        yield mysql
 
 
 @pytest.fixture()
 def postgres_provider():
-    postgres = Postgres(psql_bin_directory=config.PG_BIN_DIRECTORY)
-    return postgres
+    with tempfile.TemporaryDirectory() as temp_dir:
+        postgres = Postgres(
+            str(Path(temp_dir).resolve()),
+            psql_bin_directory=config.PG_BIN_DIRECTORY)
+        yield postgres
 
 
 @pytest.fixture()

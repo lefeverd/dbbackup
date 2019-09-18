@@ -9,7 +9,6 @@ import tempfile
 import shutil
 
 from dbbackup.providers import AbstractProvider
-from dbbackup import config
 from dbbackup.tempbackupfile import TemporaryBackupFile
 from dbbackup.utils import get_file_size, sizeof_fmt
 
@@ -23,14 +22,18 @@ MYSQL_SYSTEM_DATABASES = ["performance_schema", "information_schema"]
 
 class MySQL(AbstractProvider):
     def __init__(self,
+                 backup_directory,
                  host=DEFAULT_MYSQL_HOST,
                  user=DEFAULT_MYSQL_USER,
                  password=None,
+                 backup_suffix=None,
                  mysql_bin_directory=DEFAULT_MYSQL_BIN_DIRECTORY,
                  compress=DEFAULT_COMPRESS):
+        super().__init__(backup_directory)
         self.host = host
         self.user = user
         self.password = password
+        self.backup_suffix = backup_suffix
         self.mysql_bin_directory = mysql_bin_directory
         self.compress = compress
 
@@ -69,7 +72,7 @@ class MySQL(AbstractProvider):
             filename = self.backup_database(database)
             size = get_file_size(
                 str(
-                    Path(config.BACKUP_DIRECTORY + "/" + filename +
+                    Path(self.backup_directory + "/" + filename +
                          (self.compress and ".gz" or "")).resolve()))
             self.notify_callbacks('backup_done',
                                   datetime.now().isoformat(), database,
@@ -100,7 +103,7 @@ class MySQL(AbstractProvider):
     def backup_database(self, database):
         _logger.info(f"Starting backup for database {database}")
         filename = self.construct_backup_filename(database)
-        with TemporaryBackupFile(filename, config.BACKUP_DIRECTORY,
+        with TemporaryBackupFile(filename, self.backup_directory,
                                  self.compress) as temp_file:
             backup_cmd = self._get_backup_command(database)
             try:
@@ -130,7 +133,7 @@ class MySQL(AbstractProvider):
 
     def construct_backup_filename(self, database):
         date_str = self._get_formatted_current_datetime()
-        suffix = config.BACKUP_SUFFIX or ""
+        suffix = self.backup_suffix or ""
         return f"{date_str}-{database}{suffix}.sql"
 
     def _get_formatted_current_datetime(self):
@@ -138,19 +141,19 @@ class MySQL(AbstractProvider):
 
     def list_backups(self):
         _logger.debug("Listing backups")
-        _logger.info(f"Backup directory: {config.BACKUP_DIRECTORY}")
+        _logger.info(f"Backup directory: {self.backup_directory}")
         backup_files = self.get_backups()
         for backup_file in backup_files:
             self.display_backup(backup_file)
 
     def display_backup(self, backup_file):
         size = get_file_size(
-            str(Path(config.BACKUP_DIRECTORY + "/" + backup_file).resolve()))
+            str(Path(self.backup_directory + "/" + backup_file).resolve()))
         print(f"{backup_file}\t{sizeof_fmt(size)}")
 
     def get_backups(self):
         backup_files = [
-            a_file for a_file in os.listdir(config.BACKUP_DIRECTORY)
+            a_file for a_file in os.listdir(self.backup_directory)
             if self.is_backup(a_file)
         ]
         backup_files.sort(reverse=True)
@@ -158,10 +161,10 @@ class MySQL(AbstractProvider):
 
     def is_backup(self, a_file):
         file_name = Path(a_file).name
-        return (re.search(r"^\d{8}_\d{6}.*", file_name)
-                and (file_name.endswith(".sql") or file_name.endswith(".gz"))
-                and (config.BACKUP_SUFFIX in file_name
-                     if config.BACKUP_SUFFIX else True))
+        return (
+            re.search(r"^\d{8}_\d{6}.*", file_name)
+            and (file_name.endswith(".sql") or file_name.endswith(".gz")) and
+            (self.backup_suffix in file_name if self.backup_suffix else True))
 
     def restore_backup(self, backup_file, database, recreate=None,
                        create=None):
