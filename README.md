@@ -45,7 +45,7 @@ It supports the following database engines:
 To get the help output from the CLI, simply run:
 
 ```bash
-docker run lefeverd/docker-db-backup:0.1.0
+docker run lefeverd/dbbackup
 ```
 
 ## Common configuration
