@@ -82,7 +82,7 @@ docker run \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 postgres backup <database>
+    lefeverd/dbbackup postgres backup <database>
 ```
 
 #### Restore
@@ -100,7 +100,7 @@ docker run \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 postgres list
+    lefeverd/dbbackup postgres list
 ```
 
 
@@ -111,7 +111,7 @@ docker run \
     -e PGUSER=postgres \
     -e PGPASSWORD=postgres \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 postgres restore <file> <database>
+    lefeverd/dbbackup postgres restore <file> <database>
 ```
 
 You can chose to recreate the database with `--recreate`, or simply create with `--create`,
@@ -141,7 +141,7 @@ docker run \
     -e MYSQL_USER=test \
     -e MYSQL_PASSWORD=test \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 mysql backup <database>
+    lefeverd/dbbackup mysql backup <database>
 ```
 
 #### Restore
@@ -155,7 +155,7 @@ docker run \
     -e MYSQL_USER=test \
     -e MYSQL_PASSWORD=test \
     -v <host-backup-directory>:/backups/ \
-    lefeverd/docker-db-backup:0.1.0 mysql restore <file> <database>
+    lefeverd/dbbackup mysql restore <file> <database>
 ```
 
 # Metrics
